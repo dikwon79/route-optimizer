@@ -1006,7 +1006,8 @@ function renderResults(result, payload) {
   window._lastResult = result;
   window._lastPayload = payload;
 
-  // Render map
+  // Render map (reset instance since HTML was replaced)
+  window._mapInstance = null; window._routeLayerGroup = null;
   renderMap(result);
 }
 
@@ -1112,7 +1113,7 @@ function drawRoutes(result) {
   // Clear only route layers, keep tile layer
   window._routeLayerGroup.clearLayers();
   window._mapMarkers = [];
-  window._mapSelected = new Set();
+  window._mapSelected = new Set(); window._mapSelectOrder = [];
   window._selectedSeg = null;
 
   var coords = result.coords;
@@ -1296,7 +1297,7 @@ function drawRoutes(result) {
 
 
 function fetchTimeout(url, options, timeout) {
-  timeout = timeout || 30000;
+  timeout = timeout || 60000;
   return Promise.race([
     fetch(url, options),
     new Promise(function(_, reject) {
@@ -1389,7 +1390,7 @@ function mapClearSelection() {
       if (el) { el.style.border = '2px solid #fff'; el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'; el.style.transform = 'scale(1)'; }
     });
   }
-  window._mapSelected = new Set();
+  window._mapSelected = new Set(); window._mapSelectOrder = [];
   window._mapMarkers = window._mapMarkers || [];
   // Clear selected segment
   if (window._selectedSeg) {
@@ -1425,7 +1426,7 @@ async function mapCutSegment(gi, ri, segIdx) {
     // Add to "unassigned" list for display
     if (!result._detached) result._detached = [];
     result._detached.push(detached);
-    window._mapSelected = new Set();
+    window._mapSelected = new Set(); window._mapSelectOrder = [];
     refreshAfterEdit(result);
     return;
   }
@@ -1441,7 +1442,7 @@ async function mapCutSegment(gi, ri, segIdx) {
     gr.total_routes = gr.routes.length;
     if (!result._detached) result._detached = [];
     result._detached.push(detached);
-    window._mapSelected = new Set();
+    window._mapSelected = new Set(); window._mapSelectOrder = [];
     if (result._detached && result._detached.length === 0) delete result._detached;
     refreshAfterEdit(result);
     return;
@@ -1489,7 +1490,7 @@ async function mapCutSegment(gi, ri, segIdx) {
     gr.total_cost = gr.routes.reduce((s, r) => s + r.cost, 0);
     gr.total_routes = gr.routes.length;
 
-    window._mapSelected = new Set();
+    window._mapSelected = new Set(); window._mapSelectOrder = [];
     // Clean up empty detached array
     if (result._detached && result._detached.length === 0) delete result._detached;
     refreshAfterEdit(result);
@@ -1497,6 +1498,15 @@ async function mapCutSegment(gi, ri, segIdx) {
 }
 
 async function mapMerge() {
+  // Show loading
+  var loadEl = document.createElement('div');
+  loadEl.id = 'merge-loading';
+  loadEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20000;background:rgba(0,0,0,0.8);color:#fff;padding:16px 24px;border-radius:12px;font-size:14px;';
+  loadEl.innerHTML = '<i class="bi bi-hourglass-split"></i> 처리 중...';
+  document.body.appendChild(loadEl);
+  try { await _doMapMerge(); } finally { var el = document.getElementById('merge-loading'); if (el) el.remove(); }
+}
+async function _doMapMerge() {
   // Merge: combine entire routes that contain selected markers
   var result = window._lastResult;
   if (!result || !window._mapSelected || window._mapSelected.size === 0) {
@@ -1566,7 +1576,7 @@ async function mapMerge() {
       if (!result._detached) result._detached = [];
       result._detached.push(newDet);
       if (result._detached.length === 0) delete result._detached;
-      window._mapSelected = new Set();
+      window._mapSelected = new Set(); window._mapSelectOrder = [];
       refreshAfterEdit(result);
     }
     return;
@@ -1574,6 +1584,7 @@ async function mapMerge() {
 
   // Special case: detached + grouped (no origin) = add detached POs INTO the grouped route
   var nonOriginGrouped = groupedSelected.filter(s => s.ri >= 0);
+  console.log('mapMerge paths: detached='+detachedPOs.length+' origin='+originMarkers.length+' grouped='+groupedSelected.length+' nonOriginGrouped='+nonOriginGrouped.length);
   if (detachedPOs.length > 0 && nonOriginGrouped.length > 0 && originMarkers.length === 0) {
     // Get target: the grouped marker's route
     var tgt = nonOriginGrouped[0];
@@ -1601,6 +1612,7 @@ async function mapMerge() {
     detPOs.forEach(p => allMergePOs.push(p));
 
     var totalUnits = allMergePOs.reduce((s,p) => s + p.qty, 0);
+    console.log('detached+grouped merge: allMergePOs='+allMergePOs.length+' totalUnits='+totalUnits+' detPOs='+detPOs.length+' route POs='+tgtRt.schedule.length);
     if (totalUnits > 60) {
       showError('합산 ' + totalUnits + ' units — 최대 용량(60) 초과!');
       return;
@@ -1616,6 +1628,7 @@ async function mapMerge() {
         }),
       });
       var d5 = await resp5.json();
+      console.log('detached+grouped recalc result:', d5.success, d5.error||'ok');
       if (d5.success) {
         tgtRt.schedule = d5.route.schedule;
         tgtRt.distance_km = d5.route.distance_km;
@@ -1632,7 +1645,7 @@ async function mapMerge() {
 
       tgtGr.total_cost = tgtGr.routes.reduce((s,r) => s + r.cost, 0);
       tgtGr.total_routes = tgtGr.routes.length;
-      window._mapSelected = new Set();
+      window._mapSelected = new Set(); window._mapSelectOrder = [];
       refreshAfterEdit(result);
     } catch(e) { showError('Merge error: ' + e.message); }
     return;
@@ -1640,9 +1653,10 @@ async function mapMerge() {
 
   // Special case: origin + detached = add detached POs to that group as new route
   if (originMarkers.length > 0 && detachedPOs.length > 0 && nonOriginGrouped.length === 0) {
+    console.log('origin+detached merge path');
     var targetGi = originMarkers[0].gi;
     var targetGr = grList[targetGi];
-    if (!targetGr) { showError('Group not found'); return; }
+    if (!targetGr) { showError('Group not found (gi='+targetGi+')'); return; }
 
     try {
       // Collect ALL POs from detached routes that contain any selected marker
@@ -1658,12 +1672,14 @@ async function mapMerge() {
 
       // Check capacity
       var totalUnits = allDetPOs.reduce((s,p) => s + p.qty, 0);
+      console.log('origin+detached: allDetPOs='+allDetPOs.length+' totalUnits='+totalUnits);
       if (totalUnits > 60) {
         showError('합산 ' + totalUnits + ' units — 최대 용량(60) 초과!');
         return;
       }
 
       // Create route with all selected detached POs
+      console.log('origin+detached: calling recalc-route, group='+targetGr.group);
       var resp = await fetchTimeout('/api/recalc-route', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1694,7 +1710,7 @@ async function mapMerge() {
       }
       targetGr.total_cost = targetGr.routes.reduce((s, r) => s + r.cost, 0);
       targetGr.total_routes = targetGr.routes.length;
-      window._mapSelected = new Set();
+      window._mapSelected = new Set(); window._mapSelectOrder = [];
       refreshAfterEdit(result);
     } catch(e) { showError('Error: ' + e.message); }
     return;
@@ -1712,6 +1728,7 @@ async function mapMerge() {
   for (var k in affectedByGroup) totalAffected += affectedByGroup[k].size;
   totalAffected += detachedPOs.length;
 
+  console.log('mapMerge: totalAffected='+totalAffected+' affectedByGroup='+JSON.stringify(Object.fromEntries(Object.entries(affectedByGroup).map(([k,v])=>[k,[...v]]))));
   if (totalAffected < 2) { showError('2개 이상의 마커를 선택하세요.'); return; }
 
   // Determine target group
@@ -1749,7 +1766,7 @@ async function mapMerge() {
       });
       if (!result._detached) result._detached = [];
       result._detached.push({schedule: mergedSchedule, po_numbers: mergedSchedule.map(s=>s.po_number), warehouses: mergedSchedule.map(s=>s.warehouse), departure:'', total_units: mergedSchedule.reduce((s,st)=>s+st.quantity,0), distance_km:0, cost:0});
-      window._mapSelected = new Set();
+      window._mapSelected = new Set(); window._mapSelectOrder = [];
       refreshAfterEdit(result);
       return;
     }
@@ -1856,11 +1873,24 @@ async function mapMerge() {
       gr.total_cost = gr.routes.reduce((s, r) => s + r.cost, 0);
       gr.total_routes = gr.routes.length;
     }
-    // Remove used detached POs
+    // Remove used detached POs (only selected ones, keep rest in detached route)
     if (detachedPOs.length > 0 && result._detached) {
-      var detRis = [...new Set(detachedPOs.map(d => d.ri))].sort((a,b) => b-a);
-      detRis.forEach(ri => result._detached.splice(ri, 1));
-      if (result._detached.length === 0) delete result._detached;
+      var selectedDetPOs = new Set(detachedPOs.map(d => d.po));
+      var affDetRis = [...new Set(detachedPOs.map(d => d.ri))].sort((a,b) => b-a);
+      affDetRis.forEach(ri => {
+        var drt = result._detached[ri];
+        if (!drt) return;
+        var remaining = drt.schedule.filter(st => !selectedDetPOs.has(st.po_number));
+        if (remaining.length === 0) {
+          result._detached.splice(ri, 1);
+        } else {
+          drt.schedule = remaining;
+          drt.po_numbers = remaining.map(s => s.po_number);
+          drt.warehouses = remaining.map(s => s.warehouse);
+          drt.total_units = remaining.reduce((s,st) => s + st.quantity, 0);
+        }
+      });
+      if (result._detached && result._detached.length === 0) delete result._detached;
     }
 
     // Add merged route to target group
@@ -1873,7 +1903,7 @@ async function mapMerge() {
     targetGr.total_cost = targetGr.routes.reduce((s, r) => s + r.cost, 0);
     targetGr.total_routes = targetGr.routes.length;
 
-    window._mapSelected = new Set();
+    window._mapSelected = new Set(); window._mapSelectOrder = [];
     refreshAfterEdit(result);
   } catch(e) { showError('Merge error: ' + e.message); }
 }
@@ -2341,12 +2371,22 @@ function exitFullscreen() {
 }
 
 function showError(msg) {
-  var el = document.getElementById('errorModalBody');
-  if (el) {
-    el.textContent = msg;
-    new bootstrap.Modal(document.getElementById('errorModal')).show();
+  console.error('showError:', msg);
+  if (window._isFullscreen) {
+    // In fullscreen, modal might be hidden. Use a toast-like overlay instead.
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20000;background:#dc3545;color:#fff;padding:16px 24px;border-radius:12px;font-size:14px;font-weight:bold;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:400px;text-align:center;';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 4000);
   } else {
-    alert(msg);
+    var el = document.getElementById('errorModalBody');
+    if (el) {
+      el.textContent = msg;
+      new bootstrap.Modal(document.getElementById('errorModal')).show();
+    } else {
+      alert(msg);
+    }
   }
 }
 function cutSelectedSegment() {
@@ -2468,7 +2508,7 @@ def api_recalc_route():
     o_tz = ORIGIN_TZ.get(origin_name, ZoneInfo("America/New_York"))
     cache = load_cache()
 
-    # Try all permutations to find best order (up to MAX_STOPS=3, so max 6 perms)
+    # Try all permutations to find best order
     best_route = None
     if len(po_list) <= 6:
         for perm in itertools.permutations(range(len(po_list))):
@@ -2513,18 +2553,18 @@ def api_auto_schedule():
     # Distribute pickup times so same-day routes get different hours
     results = distribute_pickup_times(results)
 
-    # Re-simulate routes with distributed pickup times
+    # Re-simulate routes with actual departure times (not pickup)
     for i, sched in enumerate(results):
-        if not sched.get("pickup"):
+        if not sched.get("departure"):
             continue
-        pickup_dt = datetime.strptime(sched["pickup"], "%Y-%m-%d %H:%M")
+        depart_dt = datetime.strptime(sched["departure"], "%Y-%m-%d %H:%M")
         route_stops = routes[i].get("schedule", [])
         sim = evaluate_route(origin_coord,
             [{"warehouse": st["warehouse"], "po_number": st["po_number"],
               "quantity": st["quantity"], "due_date": st["due_date"],
-              "inventory_available_date": (pickup_dt - timedelta(days=1)).strftime("%Y-%m-%d")}
+              "inventory_available_date": (depart_dt - timedelta(days=1)).strftime("%Y-%m-%d")}
              for st in route_stops],
-            pickup_dt, cache, o_tz)
+            depart_dt, cache, o_tz)
         results[i]["simulated_route"] = sim
 
     save_cache(cache)

@@ -40,7 +40,7 @@ MAX_DRIVE_H = 11         # HOS: max 11h driving before mandatory rest
 MANDATORY_REST_H = 10    # HOS: 10h off-duty rest
 
 OSRM_BASE = "https://router.project-osrm.org"
-OSRM_DELAY = 0.3         # seconds between OSRM requests
+OSRM_DELAY = 0.1         # seconds between OSRM requests
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".osrm_cache.json")
 PREF_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "learned_preferences.json")
@@ -425,22 +425,18 @@ def compute_arrival_time(
 def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                         origin_tz_info: ZoneInfo, cache: dict) -> dict:
     """
-    Automatically determine optimal pickup date/time for a route.
-
-    Logic:
-    1. Target arrival = due_date - 7 days
-    2. Find first receiving window at first stop on/after target date
-    3. Work backwards to determine departure time
-    4. If travel to first stop >= 8h, prefer Friday departure
-    5. Simulate forward to verify all stops work
-
-    Returns dict with recommended pickup datetime and schedule.
+    Find the optimal departure day/time so all stops arrive within operating hours.
+    
+    Strategy: try every day in target week × pickup hours (10-14),
+    simulate full route, score by:
+    - All stops must arrive within operating hours (or wait < 12h)
+    - Minimize total wait time
+    - Prefer Thu/Fri for long haul (>= 8h first stop)
     """
     schedule = route.get("schedule", [])
     if not schedule:
         return {"pickup": None, "reason": "No stops"}
 
-    # Get earliest due date among all stops
     due_dates = []
     for st in schedule:
         try:
@@ -451,70 +447,128 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
         return {"pickup": None, "reason": "No due dates"}
 
     earliest_due = min(due_dates)
-    target_arrival = earliest_due - timedelta(days=7)
+    target_start = earliest_due - timedelta(days=9)  # search window: due-9 to due-4
 
-    # Get first stop info
-    first_stop = schedule[0]
-    wh_name = first_stop["warehouse"]
-    if wh_name not in COORDS:
-        return {"pickup": None, "reason": f"Unknown warehouse: {wh_name}"}
+    # Get first stop travel time for friday rule
+    first_wh = schedule[0]["warehouse"]
+    if first_wh not in COORDS:
+        return {"pickup": None, "reason": f"Unknown warehouse: {first_wh}"}
+    _, first_travel = osrm_pairwise(origin_coord, COORDS[first_wh], cache)
+    is_long_haul = first_travel >= 8
 
-    wh_coord = COORDS[wh_name]
-    wh_tz = WH_TZ.get(wh_name, ZoneInfo("America/New_York"))
-    recv_code = WH_BY_NAME.get(wh_name, {}).get("receiving_code", "")
+    # Build PO list for simulation
+    po_list = [{"warehouse": st["warehouse"], "po_number": st["po_number"],
+                "quantity": st["quantity"], "due_date": st["due_date"],
+                "inventory_available_date": "2026-01-01"}
+               for st in schedule]
 
-    # Calculate travel time to first stop
-    seg_dist, travel_hours = osrm_pairwise(origin_coord, wh_coord, cache)
+    picking_hours = [10, 11, 12, 13, 14]
+    best = None
+    best_score = float('inf')
+    days_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 
-    # Pickup: 10AM-2PM, any slot is fine
-    # If first stop >= 8h travel: prefer Thu/Fri departure
-    # If first stop < 8h travel: depart on target day or day before
-    target_local = target_arrival.replace(hour=0, minute=0)
+    # Try each day in the search window
+    for day_offset in range(12):  # 12 days of options
+        depart_day = target_start + timedelta(days=day_offset)
+        
+        for hour in picking_hours:
+            depart_dt = depart_day.replace(hour=hour, minute=0, second=0)
+            
+            # Don't depart after due date - 2 days
+            if depart_dt > earliest_due - timedelta(days=2):
+                continue
 
-    if travel_hours >= 8:
-        # Long haul: depart Thu or Fri before target arrival
-        for day_back in range(0, 7):
-            check = target_local - timedelta(days=day_back)
-            wd = check.weekday()
-            if wd in (3, 4):  # Thu=3, Fri=4
-                depart_final = check.replace(hour=10)
-                break
-        else:
-            depart_final = target_local.replace(hour=10)
-    else:
-        # Short haul: depart on target day
-        depart_final = target_local.replace(hour=10)
+            # Simulate route
+            result = evaluate_route(origin_coord, po_list, depart_dt, cache, origin_tz_info)
+            
+            # Check each stop: is arrival within operating hours?
+            total_wait = 0
+            all_ok = True
+            
+            for stop in result.get("schedule", []):
+                recv_code = stop.get("receiving_code", "")
+                # Parse arrival time (remove timezone abbrev)
+                arr_str = stop.get("arrival_time", "")
+                arr_parts = arr_str.split(" ")
+                if len(arr_parts) >= 2:
+                    try:
+                        arr_naive = datetime.strptime(arr_parts[0] + " " + arr_parts[1], "%Y-%m-%d %H:%M")
+                    except ValueError:
+                        all_ok = False
+                        break
+                else:
+                    all_ok = False
+                    break
+                
+                # Check if arrival is within operating hours
+                if recv_code in RECEIVING_HOURS:
+                    if is_within_receiving_hours(arr_naive, recv_code):
+                        # Great, no wait
+                        pass
+                    else:
+                        # Need to wait - find next window
+                        nw = next_receiving_window(arr_naive, recv_code, max_days=3)
+                        if nw is None:
+                            all_ok = False
+                            break
+                        wait_h = (nw - arr_naive).total_seconds() / 3600
+                        if wait_h > 18:  # More than 18h wait is bad
+                            all_ok = False
+                            break
+                        total_wait += wait_h
+            
+            if not all_ok:
+                continue
+            
+            # Score: lower is better
+            # - total_wait: minimize waiting
+            # - penalty for non-Thu/Fri on long haul
+            # - small penalty for earlier departure (prefer later = more flexibility)
+            weekday = depart_dt.weekday()
+            score = total_wait * 10  # weight wait time heavily
+            
+            if is_long_haul and weekday not in (3, 4):  # Thu, Fri preferred
+                score += 50
+            
+            # Small bonus for later departure (closer to due date = better)
+            days_before_due = (earliest_due - depart_dt).days
+            score += days_before_due * 2
+            
+            # Bonus for less total wait
+            if total_wait == 0:
+                score -= 20  # perfect timing bonus
+            
+            if score < best_score:
+                best_score = score
+                best = {
+                    "depart": depart_dt,
+                    "result": result,
+                    "total_wait": round(total_wait, 1),
+                    "weekday": weekday,
+                }
 
-    # Pickup = day before departure (loading day)
+    if best is None:
+        # Fallback: just use target date
+        depart_dt = target_start.replace(hour=10)
+        result = evaluate_route(origin_coord, po_list, depart_dt, cache, origin_tz_info)
+        best = {"depart": depart_dt, "result": result, "total_wait": 0, "weekday": depart_dt.weekday()}
+
+    depart_final = best["depart"]
     pickup_date = depart_final - timedelta(days=1)
 
-    # Pickup hour will be assigned later by distribute_pickup_times()
-
-    # Simulate the route forward from departure time
-    result = evaluate_route(origin_coord,
-        [{"warehouse": st["warehouse"], "po_number": st["po_number"],
-          "quantity": st["quantity"], "due_date": st["due_date"],
-          "inventory_available_date": pickup_date.strftime("%Y-%m-%d")}
-         for st in schedule],
-        depart_final, cache, origin_tz_info)
-
-    days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
     return {
         "pickup": pickup_date.strftime("%Y-%m-%d") + " 10:00",
-        "pickup_day": days[pickup_date.weekday()],
+        "pickup_day": days_name[pickup_date.weekday()],
         "departure": depart_final.strftime("%Y-%m-%d %H:%M"),
-        "departure_day": days[depart_final.weekday()],
-        "travel_hours_first_stop": round(travel_hours, 1),
-        "friday_rule": travel_hours >= 8,
-        "target_arrival": target_arrival.strftime("%Y-%m-%d"),
+        "departure_day": days_name[depart_final.weekday()],
+        "travel_hours_first_stop": round(first_travel, 1),
+        "friday_rule": is_long_haul,
+        "target_arrival": (earliest_due - timedelta(days=7)).strftime("%Y-%m-%d"),
         "due_date": earliest_due.strftime("%Y-%m-%d"),
-        "simulated_route": result,
+        "total_wait_hours": best["total_wait"],
+        "simulated_route": best["result"],
     }
 
-
-# ---------------------------------------------------------------------------
-# Route Feasibility & Costing
-# ---------------------------------------------------------------------------
 
 def distribute_pickup_times(schedules: List[dict]) -> List[dict]:
     """
