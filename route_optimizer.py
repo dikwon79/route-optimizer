@@ -462,7 +462,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                 "inventory_available_date": "2026-01-01"}
                for st in schedule]
 
-    picking_hours = [10, 11, 12, 13, 14]
+    picking_hours = [6, 8, 10, 11, 12, 13, 14, 16, 18, 20, 22]  # wider range for better window matching
     best = None
     best_score = float('inf')
     days_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
@@ -512,31 +512,62 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                             all_ok = False
                             break
                         wait_h = (nw - arr_naive).total_seconds() / 3600
-                        if wait_h > 18:  # More than 18h wait is bad
+                        if wait_h > 36:  # More than 36h wait is too much
                             all_ok = False
                             break
                         total_wait += wait_h
             
+            # Check: entire route must complete within 48h of first stop arrival
+            if all_ok and len(result.get("schedule", [])) > 1:
+                sched = result["schedule"]
+                first_arr = sched[0].get("arrival_time", "")
+                last_arr = sched[-1].get("adjusted_arrival", "")
+                try:
+                    fa_parts = first_arr.split(" ")
+                    la_parts = last_arr.split(" ")
+                    fa_dt = datetime.strptime(fa_parts[0] + " " + fa_parts[1], "%Y-%m-%d %H:%M")
+                    la_dt = datetime.strptime(la_parts[0] + " " + la_parts[1], "%Y-%m-%d %H:%M")
+                    route_duration_h = (la_dt - fa_dt).total_seconds() / 3600
+                    if route_duration_h > 48:
+                        all_ok = False
+                except (ValueError, IndexError):
+                    pass
+            
             if not all_ok:
                 continue
             
+            # Calculate route duration (first arrival to last adjusted arrival)
+            route_duration_h = 0
+            sched = result.get("schedule", [])
+            if len(sched) > 1:
+                try:
+                    fa = sched[0].get("arrival_time", "").split(" ")
+                    la = sched[-1].get("adjusted_arrival", "").split(" ")
+                    fa_dt2 = datetime.strptime(fa[0] + " " + fa[1], "%Y-%m-%d %H:%M")
+                    la_dt2 = datetime.strptime(la[0] + " " + la[1], "%Y-%m-%d %H:%M")
+                    route_duration_h = (la_dt2 - fa_dt2).total_seconds() / 3600
+                except (ValueError, IndexError):
+                    pass
+
             # Score: lower is better
-            # - total_wait: minimize waiting
-            # - penalty for non-Thu/Fri on long haul
-            # - small penalty for earlier departure (prefer later = more flexibility)
             weekday = depart_dt.weekday()
-            score = total_wait * 10  # weight wait time heavily
+            score = route_duration_h * 3  # prefer shorter route completion time
             
             if is_long_haul and weekday not in (3, 4):  # Thu, Fri preferred
-                score += 50
+                score += 30
             
-            # Small bonus for later departure (closer to due date = better)
+            # Prefer due_date - 7 days area
             days_before_due = (earliest_due - depart_dt).days
-            score += days_before_due * 2
+            if days_before_due < 3:
+                score += 100  # too close to due date
+            elif days_before_due > 9:
+                score += 50  # too early
+            elif 5 <= days_before_due <= 8:
+                score -= 10  # sweet spot: ~1 week before
             
-            # Bonus for less total wait
-            if total_wait == 0:
-                score -= 20  # perfect timing bonus
+            # Prefer business hours departure (10-14)
+            if 10 <= depart_dt.hour <= 14:
+                score -= 15
             
             if score < best_score:
                 best_score = score
@@ -750,8 +781,16 @@ def evaluate_route(
         # Convert to warehouse local time for display
         arrival_local = arrival_utc.astimezone(wh_tz)
         arrival_naive_local = arrival_local.replace(tzinfo=None)
-        actual_arrival_local = arrival_naive_local
         recv_code = wh.get("receiving_code", "")
+
+        # Adjust arrival to next receiving window (truck waits if early)
+        if recv_code in RECEIVING_HOURS and is_within_receiving_hours(arrival_naive_local, recv_code):
+            actual_arrival_local = arrival_naive_local
+        elif recv_code in RECEIVING_HOURS:
+            nw = next_receiving_window(arrival_naive_local, recv_code, max_days=7)
+            actual_arrival_local = nw if nw else arrival_naive_local
+        else:
+            actual_arrival_local = arrival_naive_local
 
         # Find next receiving window from arrival to get the deadline
         recv_window = next_receiving_window(arrival_naive_local, recv_code, max_days=7)
@@ -759,7 +798,7 @@ def evaluate_route(
             recv_window = arrival_naive_local
 
         # Find close time of this receiving window
-        close_minus_2h = recv_window  # fallback
+        latest_arrival = recv_window  # fallback
         if recv_code in RECEIVING_HOURS:
             for rdays, ropen, rclose in RECEIVING_HOURS[recv_code]:
                 if ropen < 0 or rclose < 0:
@@ -769,22 +808,33 @@ def evaluate_route(
                     if rclose > ropen:
                         if rw_h >= ropen and rw_h < rclose:
                             close_dt = recv_window.replace(hour=int(rclose), minute=int((rclose % 1) * 60))
-                            close_minus_2h = close_dt - timedelta(hours=2)
+                            latest_arrival = close_dt - timedelta(hours=1)
                             break
                     else:
                         if rw_h >= ropen:
                             close_dt = (recv_window + timedelta(days=1)).replace(hour=int(rclose), minute=int((rclose % 1) * 60))
                         else:
                             close_dt = recv_window.replace(hour=int(rclose), minute=int((rclose % 1) * 60))
-                        close_minus_2h = close_dt - timedelta(hours=2)
+                        latest_arrival = close_dt - timedelta(hours=1)
                         break
 
-        # Latest departure from origin = close_minus_2h - cumulative_hours
-        latest_depart_utc = close_minus_2h.replace(tzinfo=wh_tz).astimezone(timezone.utc) - timedelta(hours=cumulative_hours)
-        if origin_tz:
-            latest_depart_local = latest_depart_utc.astimezone(origin_tz)
+        # Latest departure calculation:
+        # Stop 1: latest time to leave ORIGIN to arrive at close-1h
+        # Stop 2+: latest time to leave PREVIOUS STOP to arrive at close-1h
+        if i == 0:
+            # First stop: latest pickup/departure from origin
+            latest_depart_utc = latest_arrival.replace(tzinfo=wh_tz).astimezone(timezone.utc) - timedelta(hours=cumulative_hours)
+            if origin_tz:
+                latest_depart_local = latest_depart_utc.astimezone(origin_tz)
+            else:
+                latest_depart_local = latest_depart_utc
         else:
-            latest_depart_local = latest_depart_utc
+            # Subsequent stops: latest time to leave previous stop
+            # = close-1h of this stop - segment travel time (including rest)
+            latest_depart_utc = latest_arrival.replace(tzinfo=wh_tz).astimezone(timezone.utc) - timedelta(hours=total_seg_hours)
+            # Show in previous stop's timezone
+            prev_wh_tz = WH_TZ.get(po_list[i-1]["warehouse"], wh_tz)
+            latest_depart_local = latest_depart_utc.astimezone(prev_wh_tz)
         latest_depart_str = latest_depart_local.strftime("%Y-%m-%d %H:%M") + " " + _tz_abbrev(latest_depart_local)
 
         # Re-attach timezone for UTC conversion
