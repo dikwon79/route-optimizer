@@ -828,7 +828,7 @@ function renderResults(result, payload) {
       </div>
       <table class="table table-sm table-bordered table-striped small mb-3">
         <thead class="table-light">
-          <tr><th style="width:30px;"></th><th>Stop</th><th>DC</th><th>Warehouse</th><th>PO</th><th>Qty</th><th>Seg km</th><th>Hours</th><th>마지노 출발</th><th>Arrival</th><th>Due Date</th><th>Operating Hours (운영시간)</th></tr>
+          <tr><th style="width:30px;"></th><th>Stop</th><th>DC</th><th>Warehouse</th><th>PO</th><th>Qty</th><th>Seg km</th><th>Hours</th><th>마지노 출발</th><th>Arrival</th><th>Adj Arrival</th><th>대기</th><th>Due Date</th><th>Operating Hours (운영시간)</th></tr>
         </thead>
         <tbody>`;
       rt.schedule.forEach(st => {
@@ -837,7 +837,12 @@ function renderResults(result, payload) {
         var opHrs = (result.receiving_schedules && st.receiving_code) ? (result.receiving_schedules[st.receiving_code] || st.receiving_code) : '';
         var segHrs = st.segment_hours || (st.segment_km / 80).toFixed(1);
         var restInfo = (st.rest_hours && st.rest_hours > 0) ? '<br><small class="text-muted">+' + st.rest_hours + 'h rest</small>' : '';
-        html += `<tr class="${cls}"><td><input type="checkbox" class="form-check-input po-merge-chk" data-group="${gi}" data-route="${ri}" data-stop="${st.stop-1}" data-po="${st.po_number}" data-wh="${st.warehouse}" data-qty="${st.quantity}" data-due="${st.due_date}"></td><td>${st.stop}</td><td><span class="badge bg-secondary">${st.dc_code||''}</span></td><td>${st.warehouse}</td><td>${st.po_number}</td><td>${st.quantity}</td><td>${st.segment_km}</td><td>${segHrs}h${restInfo}</td><td class="text-danger fw-bold">${addDayName(st.latest_departure||'')}</td><td>${addDayName(st.arrival_time)}</td><td>${st.due_date}</td><td>${opHrs}</td></tr>`;
+        html += `<tr class="${cls}"><td><input type="checkbox" class="form-check-input po-merge-chk" data-group="${gi}" data-route="${ri}" data-stop="${st.stop-1}" data-po="${st.po_number}" data-wh="${st.warehouse}" data-qty="${st.quantity}" data-due="${st.due_date}"></td><td>${st.stop}</td><td><span class="badge bg-secondary">${st.dc_code||''}</span></td><td>${st.warehouse}</td><td>${st.po_number}</td><td>${st.quantity}</td><td>${st.segment_km}</td><td>${segHrs}h${restInfo}</td><td class="text-danger fw-bold">${addDayName(st.latest_departure||'')}</td><td>${addDayName(st.arrival_time)}</td><td>${addDayName(st.adjusted_arrival)}</td><td>${(function(){
+          try{var a=st.arrival_time.split(' '),b=st.adjusted_arrival.split(' ');
+          var d1=new Date(a[0]+'T'+a[1]),d2=new Date(b[0]+'T'+b[1]);
+          var wh=Math.round((d2-d1)/3600000*10)/10;
+          return wh>0?wh+'h':'-';}catch(e){return '-';}
+        })()}</td><td>${st.due_date}</td><td>${opHrs}</td></tr>`;
       });
       html += '</tbody></table>';
     });
@@ -2162,7 +2167,7 @@ function showRouteModal(gi, ri, color) {
   h += '<div class="col-3"><strong>Base:</strong> $' + a.base_cost + ' + <strong>Dist:</strong> $' + distCost + '</div></div>';
 
   h += '<table class="table table-sm table-bordered table-striped small mb-0">';
-  h += '<thead class="table-light"><tr><th>Stop</th><th>DC</th><th>Warehouse</th><th>PO</th><th>Qty</th><th>Seg km</th><th>Hours</th><th>마지노 출발</th><th>Arrival</th><th>Due Date</th><th>Operating Hours</th></tr></thead><tbody>';
+  h += '<thead class="table-light"><tr><th>Stop</th><th>DC</th><th>Warehouse</th><th>PO</th><th>Qty</th><th>Seg km</th><th>Hours</th><th>마지노 출발</th><th>Arrival</th><th>Adj Arrival</th><th>대기</th><th>Due Date</th><th>Operating Hours</th></tr></thead><tbody>';
   rt.schedule.forEach(function(st) {
     var opHrs = (result.receiving_schedules && st.receiving_code) ? (result.receiving_schedules[st.receiving_code] || '') : '';
     var segHrs = st.segment_hours || (st.segment_km / 80).toFixed(1);
@@ -2172,6 +2177,9 @@ function showRouteModal(gi, ri, color) {
     h += '<td>' + st.segment_km + '</td><td>' + segHrs + 'h</td>';
     h += '<td class="text-danger fw-bold">' + addDayName(st.latest_departure||'') + '</td>';
     h += '<td>' + addDayName(st.arrival_time) + '</td>';
+    h += '<td>' + addDayName(st.adjusted_arrival) + '</td>';
+    var wh2='-';try{var aa=st.arrival_time.split(' '),bb=st.adjusted_arrival.split(' ');var dd1=new Date(aa[0]+'T'+aa[1]),dd2=new Date(bb[0]+'T'+bb[1]);var whh=Math.round((dd2-dd1)/3600000*10)/10;wh2=whh>0?whh+'h':'-';}catch(e){}
+    h += '<td>' + wh2 + '</td>';
     h += '<td>' + st.due_date + '</td><td>' + opHrs + '</td></tr>';
   });
   h += '</tbody></table></div>';

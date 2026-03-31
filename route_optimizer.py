@@ -447,14 +447,23 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
         return {"pickup": None, "reason": "No due dates"}
 
     earliest_due = min(due_dates)
-    target_start = earliest_due - timedelta(days=9)  # search window: due-9 to due-4
+    target_start = earliest_due - timedelta(days=12)  # search window: due-9 to due-4
 
     # Get first stop travel time for friday rule
     first_wh = schedule[0]["warehouse"]
     if first_wh not in COORDS:
         return {"pickup": None, "reason": f"Unknown warehouse: {first_wh}"}
+    # Check all segments for long haul (any segment >= 10h = long haul)
     _, first_travel = osrm_pairwise(origin_coord, COORDS[first_wh], cache)
-    is_long_haul = first_travel >= 8
+    max_seg_hours = first_travel
+    prev_coord = origin_coord
+    for st in schedule:
+        wh = st["warehouse"]
+        if wh in COORDS:
+            _, seg_h = osrm_pairwise(prev_coord, COORDS[wh], cache)
+            max_seg_hours = max(max_seg_hours, seg_h)
+            prev_coord = COORDS[wh]
+    is_long_haul = max_seg_hours >= 10
 
     # Build PO list for simulation
     po_list = [{"warehouse": st["warehouse"], "po_number": st["po_number"],
@@ -462,7 +471,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                 "inventory_available_date": "2026-01-01"}
                for st in schedule]
 
-    picking_hours = [6, 8, 10, 11, 12, 13, 14, 16, 18, 20, 22]  # wider range for better window matching
+    picking_hours = [6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22]  # wider range for better window matching
     best = None
     best_score = float('inf')
     days_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
@@ -551,23 +560,52 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
 
             # Score: lower is better
             weekday = depart_dt.weekday()
-            score = route_duration_h * 3  # prefer shorter route completion time
             
-            if is_long_haul and weekday not in (3, 4):  # Thu, Fri preferred
-                score += 30
+            # Primary: short wait is fine (< 3h), long wait is bad
+            if total_wait <= 3:
+                score = total_wait * 1  # minor penalty for short wait
+            else:
+                score = total_wait * 5  # bigger penalty for long wait
             
-            # Prefer due_date - 7 days area
+            # Prefer shorter route completion
+            score += route_duration_h * 2
+            
+            # Long haul: prefer Thu/Fri/Sat departure
+            if is_long_haul and weekday not in (3, 4, 5):
+                score += 20
+            
+            # Multi-stop (3+): prefer first stop arriving on Monday
+            if len(sched) >= 3:
+                try:
+                    fa = sched[0].get("arrival_time", "").split(" ")
+                    fa_dt3 = datetime.strptime(fa[0] + " " + fa[1], "%Y-%m-%d %H:%M")
+                    arr_weekday = fa_dt3.weekday()  # 0=Mon
+                    if arr_weekday == 0:  # Monday
+                        score -= 30  # strong preference
+                    elif arr_weekday == 6:  # Sunday
+                        score += 10  # mild penalty
+                    elif arr_weekday == 5:  # Saturday
+                        score += 20  # worse
+                except (ValueError, IndexError):
+                    pass
+            
+            # Prefer due_date - 5~8 days
             days_before_due = (earliest_due - depart_dt).days
             if days_before_due < 3:
-                score += 100  # too close to due date
+                score += 100
             elif days_before_due > 9:
-                score += 50  # too early
+                score += 40
             elif 5 <= days_before_due <= 8:
-                score -= 10  # sweet spot: ~1 week before
+                score -= 5
             
-            # Prefer business hours departure (10-14)
-            if 10 <= depart_dt.hour <= 14:
+            # Prefer daytime departure (10-16)
+            if 10 <= depart_dt.hour <= 16:
                 score -= 15
+            elif 6 <= depart_dt.hour <= 9 or 17 <= depart_dt.hour <= 18:
+                score -= 5
+            # Night departure penalty
+            elif depart_dt.hour >= 20 or depart_dt.hour <= 5:
+                score += 10
             
             if score < best_score:
                 best_score = score
@@ -594,7 +632,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
         "departure_day": days_name[depart_final.weekday()],
         "travel_hours_first_stop": round(first_travel, 1),
         "friday_rule": is_long_haul,
-        "target_arrival": (earliest_due - timedelta(days=7)).strftime("%Y-%m-%d"),
+        "target_arrival": (earliest_due - timedelta(days=10)).strftime("%Y-%m-%d"),
         "due_date": earliest_due.strftime("%Y-%m-%d"),
         "total_wait_hours": best["total_wait"],
         "simulated_route": best["result"],
