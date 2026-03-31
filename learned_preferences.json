@@ -1,0 +1,328 @@
+{
+  "pair_scores": {
+    "MI|MO": 1,
+    "NC|SE": 1,
+    "FE|ME": 3,
+    "MG|MK": 1,
+    "MS|SZ": 3,
+    "HP|NT": 2,
+    "HP|SW": 2,
+    "NT|SW": 3,
+    "MZ|PA": 2,
+    "NC|PA": 1,
+    "MZ|NC": 1,
+    "FE|SE": 1,
+    "ME|SE": 1,
+    "MY|NE": 2,
+    "MD|SO": 2,
+    "HP|MW": 1,
+    "MN|NW": 1,
+    "MP|SZ": 2,
+    "MP|MS": 2,
+    "MW|NW": 1,
+    "MN|MO": 1
+  },
+  "saved_results": [
+    {
+      "group": "MS-WH",
+      "timestamp": "2026-03-17 14:41",
+      "routes": [
+        {
+          "dcs": [
+            "MI",
+            "MO"
+          ],
+          "cost": 16416.28,
+          "distance_km": 1591.6
+        },
+        {
+          "dcs": [
+            "MN"
+          ],
+          "cost": 15158.68,
+          "distance_km": 1465.9
+        },
+        {
+          "dcs": [
+            "MD"
+          ],
+          "cost": 18899.92,
+          "distance_km": 1840
+        },
+        {
+          "dcs": [
+            "NC",
+            "SE"
+          ],
+          "cost": 18437.35,
+          "distance_km": 1793.7
+        },
+        {
+          "dcs": [
+            "FE",
+            "ME"
+          ],
+          "cost": 21715.74,
+          "distance_km": 2121.6
+        },
+        {
+          "dcs": [
+            "MG",
+            "MK"
+          ],
+          "cost": 9702.89,
+          "distance_km": 920.3
+        }
+      ],
+      "total_cost": 100330.86
+    },
+    {
+      "group": "L1-WH",
+      "timestamp": "2026-03-17 14:41",
+      "routes": [
+        {
+          "dcs": [
+            "MW"
+          ],
+          "cost": 22967.18,
+          "distance_km": 2246.7
+        },
+        {
+          "dcs": [
+            "SZ",
+            "MS"
+          ],
+          "cost": 26463.55,
+          "distance_km": 2596.4
+        },
+        {
+          "dcs": [
+            "HP",
+            "NT",
+            "SW"
+          ],
+          "cost": 37330.02,
+          "distance_km": 3683
+        }
+      ],
+      "total_cost": 86760.75
+    },
+    {
+      "group": "MS-WH",
+      "timestamp": "2026-03-17 15:24",
+      "routes": [
+        {
+          "dcs": [
+            "MG"
+          ],
+          "cost": 5656.18,
+          "distance_km": 515.6
+        },
+        {
+          "dcs": [
+            "PA",
+            "MZ",
+            "NC"
+          ],
+          "cost": 13696.01,
+          "distance_km": 1319.6
+        },
+        {
+          "dcs": [
+            "SE",
+            "FE",
+            "ME"
+          ],
+          "cost": 23066.26,
+          "distance_km": 2256.6
+        },
+        {
+          "dcs": [
+            "MO"
+          ],
+          "cost": 16045.72,
+          "distance_km": 1554.6
+        },
+        {
+          "dcs": [
+            "MK"
+          ],
+          "cost": 9666.73,
+          "distance_km": 916.7
+        },
+        {
+          "dcs": [
+            "NE",
+            "MY"
+          ],
+          "cost": 8787.97,
+          "distance_km": 828.8
+        },
+        {
+          "dcs": [
+            "MD",
+            "SO"
+          ],
+          "cost": 24456.35,
+          "distance_km": 2395.6
+        }
+      ],
+      "total_cost": 101375.22
+    },
+    {
+      "group": "L1-WH",
+      "timestamp": "2026-03-17 15:24",
+      "routes": [
+        {
+          "dcs": [
+            "MW",
+            "HP"
+          ],
+          "cost": 32340.81,
+          "distance_km": 3184.1
+        },
+        {
+          "dcs": [
+            "NW",
+            "MN"
+          ],
+          "cost": 30821.83,
+          "distance_km": 3032.2
+        },
+        {
+          "dcs": [
+            "NT",
+            "SW"
+          ],
+          "cost": 37389.85,
+          "distance_km": 3689
+        },
+        {
+          "dcs": [
+            "MP",
+            "SZ",
+            "MS"
+          ],
+          "cost": 26524.36,
+          "distance_km": 2602.4
+        }
+      ],
+      "total_cost": 127076.84999999999
+    },
+    {
+      "group": "MS-WH",
+      "timestamp": "2026-03-17 15:36",
+      "routes": [
+        {
+          "dcs": [
+            "PA",
+            "MZ"
+          ],
+          "cost": 10724.38,
+          "distance_km": 1022.4
+        },
+        {
+          "dcs": [
+            "NE",
+            "MY"
+          ],
+          "cost": 8787.97,
+          "distance_km": 828.8
+        },
+        {
+          "dcs": [
+            "MI"
+          ],
+          "cost": 9320.62,
+          "distance_km": 882.1
+        },
+        {
+          "dcs": [
+            "SE"
+          ],
+          "cost": 15505.97,
+          "distance_km": 1500.6
+        },
+        {
+          "dcs": [
+            "MG"
+          ],
+          "cost": 5656.18,
+          "distance_km": 515.6
+        },
+        {
+          "dcs": [
+            "MK"
+          ],
+          "cost": 9666.73,
+          "distance_km": 916.7
+        },
+        {
+          "dcs": [
+            "MD",
+            "SO"
+          ],
+          "cost": 24456.35,
+          "distance_km": 2395.6
+        },
+        {
+          "dcs": [
+            "NC"
+          ],
+          "cost": 11678.79,
+          "distance_km": 1117.9
+        },
+        {
+          "dcs": [
+            "FE",
+            "ME"
+          ],
+          "cost": 21715.74,
+          "distance_km": 2121.6
+        }
+      ],
+      "total_cost": 117512.73000000003
+    },
+    {
+      "group": "L1-WH",
+      "timestamp": "2026-03-17 15:36",
+      "routes": [
+        {
+          "dcs": [
+            "MP",
+            "SZ",
+            "MS"
+          ],
+          "cost": 26524.36,
+          "distance_km": 2602.4
+        },
+        {
+          "dcs": [
+            "NW",
+            "MW"
+          ],
+          "cost": 24043.47,
+          "distance_km": 2354.3
+        },
+        {
+          "dcs": [
+            "HP",
+            "NT",
+            "SW"
+          ],
+          "cost": 37330.02,
+          "distance_km": 3683
+        },
+        {
+          "dcs": [
+            "MN",
+            "MO"
+          ],
+          "cost": 39008.53,
+          "distance_km": 3850.9
+        }
+      ],
+      "total_cost": 126906.38
+    }
+  ]
+}

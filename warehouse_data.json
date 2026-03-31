@@ -1,0 +1,553 @@
+{
+  "origins": {
+    "Mississauga, Ontario": {
+      "lat": 43.5885,
+      "lon": -79.6437,
+      "timezone": "America/Toronto"
+    },
+    "Langley, British Columbia": {
+      "lat": 49.1203,
+      "lon": -122.6593,
+      "timezone": "America/Vancouver"
+    }
+  },
+  "warehouses": [
+    {
+      "dc_code": "ME",
+      "name": "McLane Sun East FL",
+      "address": "MCLANE SUNEAST 1818 POINCIANA BLVD KISSIMMEE, FL 34758",
+      "city": "KISSIMMEE",
+      "state": "FL",
+      "zip": "34758",
+      "group": "MS-WH",
+      "receiving_code": "ME",
+      "lat": 28.3042,
+      "lon": -81.4164,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MW",
+      "name": "McLane Western CO",
+      "address": "MCLANE WESTERN 2100 E KEN PRATT BLVD LONGMONT, CO 80504",
+      "city": "LONGMONT",
+      "state": "CO",
+      "zip": "80504",
+      "group": "L1-WH",
+      "receiving_code": "MW",
+      "lat": 40.1672,
+      "lon": -105.1019,
+      "timezone": "America/Denver"
+    },
+    {
+      "dc_code": "MO",
+      "name": "McLane Ozark MO",
+      "address": "MCLANE OZARK 2788 E SAWYER ROAD REPUBLIC, MO 65738",
+      "city": "REPUBLIC",
+      "state": "MO",
+      "zip": "65738",
+      "group": "MS-WH",
+      "receiving_code": "MO",
+      "lat": 37.12,
+      "lon": -93.4802,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "MK",
+      "name": "McLane Cumberland KY",
+      "address": "MCLANE CUMBERLAND 104 MCLANE BLVD NICHOLASVILLE, KY 40356",
+      "city": "NICHOLASVILLE",
+      "state": "KY",
+      "zip": "40356",
+      "group": "MS-WH",
+      "receiving_code": "MK",
+      "lat": 37.8887,
+      "lon": -84.573,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "NC",
+      "name": "McLane Carolina NC",
+      "address": "MCLANE CAROLINA 7253 NC-4 BATTLEBORO, NC 27809",
+      "city": "BATTLEBORO",
+      "state": "NC",
+      "zip": "27809",
+      "group": "MS-WH",
+      "receiving_code": "NC",
+      "lat": 35.9438,
+      "lon": -77.7527,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MG",
+      "name": "McLane Findlay OH",
+      "address": "MCLANE OHIO 3200 MCLANE DRIVE FINDLAY, OH 45840",
+      "city": "FINDLAY",
+      "state": "OH",
+      "zip": "45840",
+      "group": "MS-WH",
+      "receiving_code": "MG",
+      "lat": 41.0442,
+      "lon": -83.6499,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MN",
+      "name": "McLane Minnesota MN",
+      "address": "MCLANE MINNESOTA 1111 WEST 5TH STREET NORTHFIELD, MN 55057",
+      "city": "NORTHFIELD",
+      "state": "MN",
+      "zip": "55057",
+      "group": "MS-WH",
+      "receiving_code": "MN",
+      "lat": 44.4583,
+      "lon": -93.1616,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "SE",
+      "name": "McLane Southeast GA",
+      "address": "MCLANE SOUTHEAST 300 NORTH HWY 29 ATHENS, GA 30601",
+      "city": "ATHENS",
+      "state": "GA",
+      "zip": "30601",
+      "group": "MS-WH",
+      "receiving_code": "SE",
+      "lat": 33.9519,
+      "lon": -83.3576,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MS",
+      "name": "McLane Sun West AZ",
+      "address": "MCLANE SUNWEST 14149 WEST MCDOWELL ROAD GOODYEAR, AZ 85395-25",
+      "city": "GOODYEAR",
+      "state": "AZ",
+      "zip": "85395",
+      "group": "L1-WH",
+      "receiving_code": "MS",
+      "lat": 33.4353,
+      "lon": -112.3577,
+      "timezone": "America/Phoenix"
+    },
+    {
+      "dc_code": "MD",
+      "name": "McLane Dothan AL",
+      "address": "MCLANE DOTHAN 100 MCLANE PARKWAY COTTONWOOD, AL 36320",
+      "city": "COTTONWOOD",
+      "state": "AL",
+      "zip": "36320",
+      "group": "MS-WH",
+      "receiving_code": "MD",
+      "lat": 31.0587,
+      "lon": -85.3963,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "NT",
+      "name": "McLane North Texas TX",
+      "address": "MCLANE NORTH TEXAS 7550 OAK GROVE RD FORT WORTH, TX 76140",
+      "city": "FORT WORTH",
+      "state": "TX",
+      "zip": "76140",
+      "group": "L1-WH",
+      "receiving_code": "NT",
+      "lat": 32.6587,
+      "lon": -97.3208,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "MP",
+      "name": "McLane Pacific CA",
+      "address": "MCLANE PACIFIC 3876 CHILDS AVE MERCED, CA 95340",
+      "city": "MERCED",
+      "state": "CA",
+      "zip": "95340",
+      "group": "L1-WH",
+      "receiving_code": "MP",
+      "lat": 37.3022,
+      "lon": -120.483,
+      "timezone": "America/Los_Angeles"
+    },
+    {
+      "dc_code": "SO",
+      "name": "McLane Brookhaven MS",
+      "address": "MCLANE SOUTHERN 2104 MANUFACTURERS BLVD BROOKHAVEN, MS 39601",
+      "city": "BROOKHAVEN",
+      "state": "MS",
+      "zip": "39601",
+      "group": "MS-WH",
+      "receiving_code": "SO",
+      "lat": 31.5791,
+      "lon": -90.4407,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "MI",
+      "name": "McLane Midwest MI",
+      "address": "",
+      "city": "Danville",
+      "state": "Illinois",
+      "zip": "61834",
+      "group": "MS-WH",
+      "receiving_code": "MI",
+      "lat": 40.1245,
+      "lon": -87.63,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "PA",
+      "name": "McLane Pennsylvania PA",
+      "address": "MCLANE PA 43 VALLY VIEW BUSINESS PA JESSUP, PA 18434",
+      "city": "JESSUP",
+      "state": "PA",
+      "zip": "18434",
+      "group": "MS-WH",
+      "receiving_code": "PA",
+      "lat": 41.4687,
+      "lon": -75.562,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "SW",
+      "name": "McLane Southwest TX",
+      "address": "MCLANE SOUTHWEST 2828 INDUSTRIAL BLVD TEMPLE, TX 76504",
+      "city": "TEMPLE",
+      "state": "TX",
+      "zip": "76504",
+      "group": "L1-WH",
+      "receiving_code": "SW",
+      "lat": 31.0982,
+      "lon": -97.3428,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "HP",
+      "name": "McLane High Plains TX",
+      "address": "MCLANE HIGH PLAINS 1717 E LOOP 289 LUBBOCK, TX 79403",
+      "city": "LUBBOCK",
+      "state": "TX",
+      "zip": "79403",
+      "group": "L1-WH",
+      "receiving_code": "HP",
+      "lat": 33.5779,
+      "lon": -101.8552,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "SZ",
+      "name": "McLane Southern California CA",
+      "address": "MCLANE SO. CALIF. 4472 GEORGIA BLVD San Bernardino, CA 92407-18",
+      "city": "San Bernardino",
+      "state": "CA",
+      "zip": "92407",
+      "group": "L1-WH",
+      "receiving_code": "SZ",
+      "lat": 34.1083,
+      "lon": -117.2898,
+      "timezone": "America/Los_Angeles"
+    },
+    {
+      "dc_code": "FE",
+      "name": "McLane Ocala FL",
+      "address": "MCLANE OCALA 910 NW 50TH AVE OCALA, FL 34482",
+      "city": "OCALA",
+      "state": "FL",
+      "zip": "34482",
+      "group": "MS-WH",
+      "receiving_code": "FE",
+      "lat": 29.1872,
+      "lon": -82.1401,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "NE",
+      "name": "McLane Northeast NY",
+      "address": "MCLANE NORTHEAST 2828 MCLANE DRIVE BALDWINSVILLE, NY 13027",
+      "city": "BALDWINSVILLE",
+      "state": "NY",
+      "zip": "13027",
+      "group": "MS-WH",
+      "receiving_code": "NE",
+      "lat": 43.1587,
+      "lon": -76.3327,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MZ",
+      "name": "McLane Mid Atlantic VA",
+      "address": "MCLANE MID-ATLANTIC 56 MCLANE DRIVE Fredricksburg, VA 22406",
+      "city": "Fredricksburg",
+      "state": "VA",
+      "zip": "22406",
+      "group": "MS-WH",
+      "receiving_code": "MZ",
+      "lat": 38.3032,
+      "lon": -77.4605,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "MY",
+      "name": "McLane Concord NH",
+      "address": "MCLANE NE/CONCORD 932 MAPLE ST CONTOOCOOK, NH 03229",
+      "city": "CONTOOCOOK",
+      "state": "NH",
+      "zip": "03229",
+      "group": "MS-WH",
+      "receiving_code": "MY",
+      "lat": 43.2254,
+      "lon": -71.7101,
+      "timezone": "America/New_York"
+    },
+    {
+      "dc_code": "NW",
+      "name": "McLane Northwest WA",
+      "address": "MCLANE NORTHWEST 9611 45TH AVE SW BLDG 4 LAKEWOOD, WA 98499",
+      "city": "LAKEWOOD",
+      "state": "WA",
+      "zip": "98499",
+      "group": "L1-WH",
+      "receiving_code": "NW",
+      "lat": 47.1718,
+      "lon": -122.5185,
+      "timezone": "America/Los_Angeles"
+    },
+    {
+      "dc_code": "ME",
+      "name": "McLane Company Inc.",
+      "address": "",
+      "city": "Temple",
+      "state": "TX",
+      "zip": "76503",
+      "group": "L1-WH",
+      "receiving_code": "ME",
+      "lat": 31.1463,
+      "lon": -97.3794,
+      "timezone": "America/Chicago"
+    },
+    {
+      "dc_code": "WJ",
+      "name": "McLane New Jersey NJ",
+      "address": "",
+      "city": "Carneys Point",
+      "state": "New Jersey",
+      "zip": "08069",
+      "group": "MS-WH",
+      "receiving_code": "WJ",
+      "lat": 39.7101,
+      "lon": -75.4988,
+      "timezone": "America/New_York"
+    }
+  ],
+  "receiving_schedules": {
+    "MG": [
+      [
+        "MON-FRI",
+        "6AM",
+        "1PM"
+      ],
+      [
+        "SUN-FRI",
+        "8:30PM",
+        "2:30AM"
+      ]
+    ],
+    "FE": [
+      [
+        "SUN",
+        "2PM",
+        "6PM"
+      ],
+      [
+        "MON-THU",
+        "6PM",
+        "9PM"
+      ]
+    ],
+    "HP": [
+      [
+        "SUN-THU",
+        "5PM",
+        "9PM"
+      ]
+    ],
+    "MD": [
+      [
+        "SUN-FRI",
+        "8PM",
+        "1AM"
+      ]
+    ],
+    "ME": [
+      [
+        "MON-THU",
+        "7PM",
+        "11PM"
+      ],
+      [
+        "SUN",
+        "6PM",
+        "10PM"
+      ],
+      [
+        "FRI",
+        "CLOSE",
+        ""
+      ]
+    ],
+    "MI": [
+      [
+        "SUN-THU",
+        "4PM",
+        "11PM"
+      ]
+    ],
+    "MK": [
+      [
+        "SUN-THU",
+        "8PM",
+        "3AM"
+      ]
+    ],
+    "MN": [
+      [
+        "SUN-THU",
+        "7PM",
+        "2AM"
+      ]
+    ],
+    "MO": [
+      [
+        "MON-FRI",
+        "5AM",
+        "2PM"
+      ]
+    ],
+    "MP": [
+      [
+        "MON-FRI",
+        "3PM",
+        "8PM"
+      ]
+    ],
+    "MS": [
+      [
+        "MON-FRI",
+        "1PM",
+        "5PM"
+      ]
+    ],
+    "MW": [
+      [
+        "SUN",
+        "5PM",
+        "2AM"
+      ],
+      [
+        "MON-THU",
+        "8PM",
+        "2AM"
+      ]
+    ],
+    "MY": [
+      [
+        "SUN-THU",
+        "7PM",
+        "1AM"
+      ]
+    ],
+    "MZ": [
+      [
+        "MON-FRI",
+        "11AM",
+        "4PM"
+      ]
+    ],
+    "NC": [
+      [
+        "MON-FRI",
+        "10AM",
+        "4PM"
+      ]
+    ],
+    "NE": [
+      [
+        "SUN-THU",
+        "8PM",
+        "1AM"
+      ]
+    ],
+    "NT": [
+      [
+        "SUN-THU",
+        "7PM",
+        "2AM"
+      ]
+    ],
+    "NW": [
+      [
+        "SUN-THU",
+        "8PM",
+        "1AM"
+      ]
+    ],
+    "PA": [
+      [
+        "MON-FRI",
+        "7AM",
+        "2PM"
+      ]
+    ],
+    "SE": [
+      [
+        "SUN NIGHT-THU NIGHT",
+        "11PM",
+        "2AM"
+      ]
+    ],
+    "SO": [
+      [
+        "SUN-THU",
+        "7PM",
+        "11PM"
+      ]
+    ],
+    "SW": [
+      [
+        "SUN-THU",
+        "5PM",
+        "10PM"
+      ]
+    ],
+    "SZ": [
+      [
+        "SUN-THU",
+        "9PM",
+        "11PM"
+      ]
+    ],
+    "WJ": [
+      [
+        "MON-FRI",
+        "2PM",
+        "12AM"
+      ],
+      [
+        "SAT",
+        "2PM",
+        "6PM"
+      ],
+      [
+        "SUN",
+        "2PM",
+        "8PM"
+      ]
+    ],
+    "WK": [
+      [
+        "MON-FRI",
+        "12:30AM",
+        "6AM"
+      ]
+    ]
+  }
+}
