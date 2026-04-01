@@ -562,6 +562,8 @@ async function optimize() {
     window._prevL1Cost = 0; window._prevMSCost = 0; window._initL1Cost = 0; window._initMSCost = 0; window._initTotalCost = 0;  // reset cost tracking
     if (window._lastResult) delete window._lastResult._detached;  // clear detached
     renderResults(result, payload);
+    // Auto-run schedule after results load
+    setTimeout(function() { autoSchedule(); }, 500);
   } catch(e) {
     document.getElementById('loading-overlay').classList.remove('active');
     alert('Request failed: ' + e.message);
@@ -1131,7 +1133,8 @@ function drawRoutes(result) {
 
   for (var g = 0; g < groups.length; g++) {
     var gr = groups[g];
-    if (!gr || !gr.routes || gr.routes.length === 0) continue;
+    if (!gr) continue;
+    if (!gr.routes) gr.routes = [];
 
     var isMS = gr.group === 'MS-WH';
     var originKey = isMS ? '__ms_origin__' : '__l1_origin__';
@@ -1928,10 +1931,9 @@ async function autoSchedule() {
   var result = window._lastResult;
   if (!result) { alert('결과가 없습니다.'); return; }
 
-  var btn = event.target.closest('button');
-  var origText = btn.innerHTML;
-  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 계산 중...';
-  btn.disabled = true;
+  var btn = (typeof event !== 'undefined' && event && event.target) ? event.target.closest('button') : null;
+  var origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 계산 중...'; btn.disabled = true; }
 
   try {
     var allGroups = [result.ms_result, result.l1_result];
@@ -1973,8 +1975,7 @@ async function autoSchedule() {
       gr.total_cost = gr.routes.reduce(function(s, r) { return s + r.cost; }, 0);
     }
 
-    btn.innerHTML = origText;
-    btn.disabled = false;
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
 
     // Show summary
     var msg = '스케줄 자동결정 완료!\n\n';
@@ -1993,8 +1994,7 @@ async function autoSchedule() {
 
     renderResults(result, window._lastPayload);
   } catch(e) {
-    btn.innerHTML = origText;
-    btn.disabled = false;
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
     alert('스케줄 결정 오류: ' + e.message);
   }
 }

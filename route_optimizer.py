@@ -574,6 +574,16 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             if is_long_haul and weekday not in (3, 4, 5):
                 score += 20
             
+            # Penalize Friday arrival (risky - any delay = miss weekend)
+            for si2, stop2 in enumerate(sched):
+                try:
+                    sa = stop2.get("arrival_time", "").split(" ")
+                    sa_dt = datetime.strptime(sa[0] + " " + sa[1], "%Y-%m-%d %H:%M")
+                    if sa_dt.weekday() == 4:  # Friday
+                        score += 30  # strong penalty per stop arriving Friday
+                except (ValueError, IndexError):
+                    pass
+
             # Multi-stop (3+): prefer first stop arriving on Monday
             if len(sched) >= 3:
                 try:
