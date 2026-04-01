@@ -574,6 +574,21 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             if is_long_haul and weekday not in (3, 4, 5):
                 score += 20
             
+            # First stop: prefer arriving 1-3h before operating window opens
+            if len(sched) > 0:
+                try:
+                    fa = sched[0].get("arrival_time", "").split(" ")
+                    adj = sched[0].get("adjusted_arrival", "").split(" ")
+                    fa_dt4 = datetime.strptime(fa[0] + " " + fa[1], "%Y-%m-%d %H:%M")
+                    adj_dt4 = datetime.strptime(adj[0] + " " + adj[1], "%Y-%m-%d %H:%M")
+                    early_h = (adj_dt4 - fa_dt4).total_seconds() / 3600  # hours before window
+                    if 1 <= early_h <= 3:
+                        score -= 15  # sweet spot: arrive 1-3h early
+                    elif early_h < 0.5:
+                        score += 10  # too tight, cutting it close
+                except (ValueError, IndexError):
+                    pass
+
             # Penalize Friday arrival (risky - any delay = miss weekend)
             for si2, stop2 in enumerate(sched):
                 try:
