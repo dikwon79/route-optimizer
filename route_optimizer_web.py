@@ -4098,8 +4098,8 @@ def rag_template():
     border = Border(left=Side(style="thin"), right=Side(style="thin"),
                     top=Side(style="thin"), bottom=Side(style="thin"))
 
-    headers = [("ROUTE", 8), ("PU FROM", 8), ("DC", 8), ("PO #", 22),
-               ("QTY (PALLETS)", 14), ("PICK UP", 18), ("APPT (Delivery)", 25), ("DUE DATE", 12)]
+    headers = [("PU FROM", 8), ("DC", 8), ("PO #", 22),
+               ("QTY (PALLETS)", 14), ("Loading", 10), ("PICK UP", 18), ("APPT (Delivery)", 25), ("DUE DATE", 12)]
     col_letters = 'ABCDEFGH'
     for col, (name, width) in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=name)
@@ -4107,14 +4107,14 @@ def rag_template():
         ws.column_dimensions[col_letters[col-1]].width = width
 
     samples = [
-        (1, "MS", "MG", "MG10189076-01", 40, "3/13 @ 11am", "March 16, 2026, 8:30 PM EDT", "3/24"),
-        (1, "MS", "MK", "MK10090088-01", 20, "", "March 17, 2026, 8:00 PM EDT", "3/24"),
-        (2, "MS", "SE", "SE10198234-01", 36, "3/13 @ 12pm", "March 16, 2026, 11:00 PM EDT", "3/24"),
-        (2, "MS", "FE", "FE10190732-01", 8, "", "March 17, 2026, 6:00 PM EDT", "3/24"),
-        (2, "MS", "ME", "ME10132021-01", 12, "", "March 17, 2026, 7:00 PM EDT", "3/24"),
-        (3, "MS", "MN", "MN10098698-01", 20, "3/16 @ 11am", "March 17, 2026, 7:00 PM CDT", "3/24"),
-        (4, "L1", "NW", "NW10089277-01", 4, "3/13 @ 12pm", "March 15, 2026, 8:00 PM PDT", "3/24"),
-        (4, "L1", "MW", "MW10094380-01", 44, "", "March 17, 2026, 8:00 PM MDT", "3/24"),
+        ("MS", "MG", "MG10189076-01", 40, "Tail", "3/13 @ 11am", "March 16, 2026, 8:30 PM EDT", "3/24"),
+        ("MS", "MK", "MK10090088-01", 20, "Nose", "", "March 17, 2026, 8:00 PM EDT", "3/24"),
+        ("MS", "SE", "SE10198234-01", 36, "Tail", "3/13 @ 12pm", "March 16, 2026, 11:00 PM EDT", "3/24"),
+        ("MS", "FE", "FE10190732-01", 8, "Middle", "", "March 17, 2026, 6:00 PM EDT", "3/24"),
+        ("MS", "ME", "ME10132021-01", 12, "Nose", "", "March 17, 2026, 7:00 PM EDT", "3/24"),
+        ("MS", "MN", "MN10098698-01", 20, "-", "3/16 @ 11am", "March 17, 2026, 7:00 PM CDT", "3/24"),
+        ("L1", "NW", "NW10089277-01", 4, "Tail", "3/13 @ 12pm", "March 15, 2026, 8:00 PM PDT", "3/24"),
+        ("L1", "MW", "MW10094380-01", 44, "Nose", "", "March 17, 2026, 8:00 PM MDT", "3/24"),
     ]
     for r, row_data in enumerate(samples, 2):
         for c, val in enumerate(row_data, 1):
