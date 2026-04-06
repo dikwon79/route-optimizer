@@ -700,6 +700,11 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                 except (ValueError, IndexError):
                     pass
 
+            # No weekend pickup: if departure requires Sat/Sun pickup, big penalty
+            pickup_day = (depart_dt - timedelta(days=1)).weekday()
+            if pickup_day in (5, 6):  # Sat, Sun pickup needed
+                score += 50  # strong penalty
+
             # Penalize Friday arrival (risky - any delay = miss weekend)
             for si2, stop2 in enumerate(sched):
                 try:
@@ -760,6 +765,11 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
 
     depart_final = best["depart"]
     pickup_date = depart_final - timedelta(days=1)
+    # No pickup on Sat/Sun - move to Friday
+    if pickup_date.weekday() == 5:  # Saturday
+        pickup_date = pickup_date - timedelta(days=1)  # Friday
+    elif pickup_date.weekday() == 6:  # Sunday
+        pickup_date = pickup_date - timedelta(days=2)  # Friday
 
     return {
         "pickup": pickup_date.strftime("%Y-%m-%d") + " 10:00",
