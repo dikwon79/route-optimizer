@@ -824,16 +824,16 @@ def balance_departure_dates(schedules: List[dict]) -> List[dict]:
         if len(indices) <= MAX_PER_DAY:
             continue
         
-        # Sort by score (higher score = easier to move)
+        # Sort by first stop travel time: longest stays on Friday, shortest moves
         scored = []
         for idx in indices:
             top = schedules[idx].get("top_candidates", [])
-            scored.append((idx, top))
+            travel_h = schedules[idx].get("travel_hours_first_stop", 0)
+            scored.append((idx, top, travel_h))
         
-        # Keep the best MAX_PER_DAY, try to move the rest
-        # Routes with more alternative candidates are easier to move
-        scored.sort(key=lambda x: len(x[1]), reverse=True)
-        to_move = scored[MAX_PER_DAY:]
+        # Keep longest travel on this day, move shortest to other days
+        scored.sort(key=lambda x: x[2])  # shortest first = first to move
+        to_move = scored[:len(scored) - MAX_PER_DAY]  # move the shortest ones
         
         for idx, top_cands in to_move:
             # Find an alternative date that's not overloaded
