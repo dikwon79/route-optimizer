@@ -3369,9 +3369,11 @@ async function uploadRAG(input) {
           h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
           h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          var apptDisplay = s.appt || '';
+          var apptDisplay = '';
           if (s.appt_history && s.appt_history.length > 1) {
-            apptDisplay += ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span>';
+            apptDisplay = s.appt_history[0] + ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span><br><small class="text-muted">최종: ' + s.appt_history[s.appt_history.length-1] + '</small>';
+          } else {
+            apptDisplay = s.appt || '';
           }
           h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + apptDisplay + '</td></tr>';
         });
@@ -4022,9 +4024,11 @@ async function uploadRAG(input) {
           h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
           h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          var apptDisplay = s.appt || '';
+          var apptDisplay = '';
           if (s.appt_history && s.appt_history.length > 1) {
-            apptDisplay += ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span>';
+            apptDisplay = s.appt_history[0] + ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span><br><small class="text-muted">최종: ' + s.appt_history[s.appt_history.length-1] + '</small>';
+          } else {
+            apptDisplay = s.appt || '';
           }
           h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + apptDisplay + '</td></tr>';
         });
@@ -4253,7 +4257,7 @@ def rag_preview():
     for rnum, rdata in sorted(routes_map.items(), key=route_sort_key):
         stops = []
         for s in rdata["stops"]:
-            stops.append({"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "loading": s.get("loading",""), "pickup": s.get("pickup","")})
+            stops.append({"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "appt_history": s.get("appt_history",[]), "loading": s.get("loading",""), "pickup": s.get("pickup","")})
         preview.append({"route": rnum, "group": rdata["group"], "stops": stops, "total_qty": sum(s["qty"] for s in rdata["stops"])})
 
     print(f"RAG parse: {row_count} rows, {skip_count} skipped, {len(routes_map)} routes", file=sys.stderr)
