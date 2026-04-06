@@ -4021,22 +4021,22 @@ def rag_template():
                     top=Side(style="thin"), bottom=Side(style="thin"))
 
     headers = [("ROUTE", 8), ("PU FROM", 8), ("DC", 8), ("PO #", 22),
-               ("QTY (PALLETS)", 14), ("PICK UP", 18), ("DUE DATE", 12)]
-    col_letters = 'ABCDEFG'
+               ("QTY (PALLETS)", 14), ("PICK UP", 18), ("APPT (Delivery)", 25), ("DUE DATE", 12)]
+    col_letters = 'ABCDEFGH'
     for col, (name, width) in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=name)
         cell.font = hfont; cell.fill = hfill; cell.alignment = halign; cell.border = border
         ws.column_dimensions[col_letters[col-1]].width = width
 
     samples = [
-        (1, "MS", "MG", "MG10189076-01", 40, "3/13 @ 11am", "3/24"),
-        (1, "MS", "MK", "MK10090088-01", 20, "", "3/24"),
-        (2, "MS", "SE", "SE10198234-01", 36, "3/13 @ 12pm", "3/24"),
-        (2, "MS", "FE", "FE10190732-01", 8, "", "3/24"),
-        (2, "MS", "ME", "ME10132021-01", 12, "", "3/24"),
-        (3, "MS", "MN", "MN10098698-01", 20, "3/16 @ 11am", "3/24"),
-        (4, "L1", "NW", "NW10089277-01", 4, "3/13 @ 12pm", "3/24"),
-        (4, "L1", "MW", "MW10094380-01", 44, "", "3/24"),
+        (1, "MS", "MG", "MG10189076-01", 40, "3/13 @ 11am", "March 16, 2026, 8:30 PM EDT", "3/24"),
+        (1, "MS", "MK", "MK10090088-01", 20, "", "March 17, 2026, 8:00 PM EDT", "3/24"),
+        (2, "MS", "SE", "SE10198234-01", 36, "3/13 @ 12pm", "March 16, 2026, 11:00 PM EDT", "3/24"),
+        (2, "MS", "FE", "FE10190732-01", 8, "", "March 17, 2026, 6:00 PM EDT", "3/24"),
+        (2, "MS", "ME", "ME10132021-01", 12, "", "March 17, 2026, 7:00 PM EDT", "3/24"),
+        (3, "MS", "MN", "MN10098698-01", 20, "3/16 @ 11am", "March 17, 2026, 7:00 PM CDT", "3/24"),
+        (4, "L1", "NW", "NW10089277-01", 4, "3/13 @ 12pm", "March 15, 2026, 8:00 PM PDT", "3/24"),
+        (4, "L1", "MW", "MW10094380-01", 44, "", "March 17, 2026, 8:00 PM MDT", "3/24"),
     ]
     for r, row_data in enumerate(samples, 2):
         for c, val in enumerate(row_data, 1):
@@ -4074,31 +4074,56 @@ def rag_learn():
         elif "PO" in h and "#" in h: col["po"] = i
         elif "QTY" in h or "PALLET" in h: col["qty"] = i
         elif "PICK" in h: col["pickup"] = i
+        elif "APPT" in h or "DELIVERY" in h and "DUE" not in h: col["appt"] = i
         elif "DUE" in h: col["due"] = i
 
-    if "route" not in col or "dc" not in col:
-        return jsonify({"success": False, "error": "ROUTE, DC 컬럼이 필요합니다."})
+    if "dc" not in col:
+        return jsonify({"success": False, "error": "DC 컬럼이 필요합니다."})
+
+    # Also detect Loading and Hours columns
+    for i, h in enumerate(headers):
+        if "LOADING" in h: col["loading"] = i
+        elif h == "HOURS" or h == "HRS": col["hours"] = i
+        elif "WAVE" in h: col["wave"] = i
 
     # Parse rows into routes
-    routes_map = {}  # route_num -> {group, stops: [{dc, po, qty}]}
+    # Two modes: 1) ROUTE column exists, or 2) group by PICK UP (new pickup = new truck)
+    routes_map = {}
+    current_route = 0
+    has_route_col = "route" in col
+
     for row in ws.iter_rows(min_row=2, values_only=True):
         vals = list(row)
-        route_num = vals[col["route"]] if col.get("route") is not None else None
-        if not route_num: continue
-        route_num = str(route_num).strip()
-
-        dc = str(vals[col["dc"]] or "").strip().upper()
-        po = str(vals[col.get("po", 0)] or "").strip()
+        
+        dc = str(vals[col["dc"]] or "").strip().upper() if col.get("dc") is not None else ""
+        if not dc: continue
+        
+        po = str(vals[col.get("po", 0)] or "").strip() if col.get("po") is not None else ""
         qty = 0
         if col.get("qty") is not None:
             try: qty = int(float(str(vals[col["qty"]] or 0).replace(",","")))
             except: pass
-        pu = str(vals[col.get("pu", 0)] or "").strip().upper()
-        due = str(vals[col.get("due", 0)] or "").strip()
+        pu = str(vals[col.get("pu", 0)] or "").strip().upper() if col.get("pu") is not None else ""
+        due = str(vals[col.get("due", 0)] or "").strip() if col.get("due") is not None else ""
+        appt = str(vals[col.get("appt", 0)] or "").strip() if col.get("appt") is not None else ""
+        pickup = str(vals[col.get("pickup", 0)] or "").strip() if col.get("pickup") is not None else ""
+        loading = str(vals[col.get("loading", 0)] or "").strip() if col.get("loading") is not None else ""
+
+        if has_route_col:
+            route_num = str(vals[col["route"]] or "").strip()
+            if not route_num: route_num = str(current_route)
+        else:
+            # No ROUTE column: new PICK UP time = new truck
+            if pickup:
+                current_route += 1
+            route_num = str(current_route)
 
         if route_num not in routes_map:
             routes_map[route_num] = {"group": pu or "MS", "stops": []}
-        routes_map[route_num]["stops"].append({"dc": dc, "po": po, "qty": qty, "due": due})
+        routes_map[route_num]["stops"].append({
+            "dc": dc, "po": po, "qty": qty, "due": due, 
+            "appt": appt, "pickup": pickup, "loading": loading
+        })
         if pu: routes_map[route_num]["group"] = pu
 
     # Convert to learning format and save
@@ -4116,7 +4141,8 @@ def rag_learn():
     for rnum, rdata in routes_map.items():
         dcs = [s["dc"] for s in rdata["stops"]]
         total_qty = sum(s["qty"] for s in rdata["stops"])
-        rag_entry["routes"].append({"route": rnum, "group": rdata["group"], "dcs": dcs, "total_qty": total_qty})
+        appts = [s.get("appt","") for s in rdata["stops"] if s.get("appt")]
+        rag_entry["routes"].append({"route": rnum, "group": rdata["group"], "dcs": dcs, "total_qty": total_qty, "appts": appts})
 
         # Update pair scores
         for i in range(len(dcs)):
