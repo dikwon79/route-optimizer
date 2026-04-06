@@ -438,10 +438,13 @@ def get_preferred_appt_hours() -> dict:
                 if i >= len(dcs) or not appt:
                     continue
                 dc = dcs[i]
-                # Parse APPT time: handle "old -> new" format (use final value)
+                # Parse APPT time: handle "old -> new" format
                 import re
+                original_appt = None
                 if '->' in appt:
-                    appt = appt.split('->')[-1].strip()
+                    parts = appt.split('->')
+                    original_appt = parts[0].strip()
+                    appt = parts[-1].strip()  # use final value for preferred hour
                 # Try to extract hour
                 h = None
                 # Pattern: H:MM AM/PM
@@ -465,13 +468,40 @@ def get_preferred_appt_hours() -> dict:
                             h = 0
                 if h is not None:
                     if dc not in dc_hours:
-                        dc_hours[dc] = []
-                    dc_hours[dc].append(h)
+                        dc_hours[dc] = {"final": [], "original": [], "delays": 0}
+                    dc_hours[dc]["final"].append(h)
+                    
+                    # If there was an original APPT, track delay pattern
+                    if original_appt:
+                        dc_hours[dc]["delays"] += 1
+                        # Parse original hour too
+                        m_orig = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)', original_appt)
+                        if not m_orig:
+                            m_orig = re.search(r'(\d{1,2})\s*(AM|PM|am|pm)', original_appt)
+                        if m_orig:
+                            oh = int(m_orig.group(1))
+                            if len(m_orig.groups()) == 3:
+                                if m_orig.group(3).upper() == 'PM' and oh != 12: oh += 12
+                                if m_orig.group(3).upper() == 'AM' and oh == 12: oh = 0
+                            else:
+                                if m_orig.group(2).upper() == 'PM' and oh != 12: oh += 12
+                                if m_orig.group(2).upper() == 'AM' and oh == 12: oh = 0
+                            dc_hours[dc]["original"].append(oh)
     
-    # Average
+    # Average final hours, include delay info
     result = {}
-    for dc, hours in dc_hours.items():
-        result[dc] = round(sum(hours) / len(hours), 1)
+    for dc, data in dc_hours.items():
+        if isinstance(data, dict) and data["final"]:
+            avg_final = round(sum(data["final"]) / len(data["final"]), 1)
+            avg_orig = round(sum(data["original"]) / len(data["original"]), 1) if data["original"] else None
+            result[dc] = {
+                "preferred_hour": avg_final,
+                "original_hour": avg_orig,
+                "delay_count": data["delays"],
+                "total_count": len(data["final"]),
+            }
+        elif isinstance(data, list) and data:  # backward compat
+            result[dc] = {"preferred_hour": round(sum(data) / len(data), 1), "original_hour": None, "delay_count": 0, "total_count": len(data)}
     return result
 
 
@@ -636,13 +666,19 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                         sa3 = stop3.get("adjusted_arrival", "").split(" ")
                         sa3_dt = datetime.strptime(sa3[0] + " " + sa3[1], "%Y-%m-%d %H:%M")
                         arr_hour = sa3_dt.hour + sa3_dt.minute / 60.0
-                        pref_hour = pref_appts[dc3]
+                        pref = pref_appts[dc3]
+                        pref_hour = pref["preferred_hour"] if isinstance(pref, dict) else pref
                         diff_h = abs(arr_hour - pref_hour)
-                        if diff_h > 12: diff_h = 24 - diff_h  # wrap around midnight
+                        if diff_h > 12: diff_h = 24 - diff_h
                         if diff_h <= 1:
-                            score -= 20  # great: within 1h of usual APPT
+                            score -= 20
                         elif diff_h <= 3:
-                            score -= 10  # good: within 3h
+                            score -= 10
+                        # DC with frequent delays: add buffer time
+                        if isinstance(pref, dict) and pref.get("delay_count", 0) > 0:
+                            delay_ratio = pref["delay_count"] / max(pref["total_count"], 1)
+                            if delay_ratio > 0.3:
+                                score += 5  # this DC often delays, slight penalty for tight schedules
                     except (ValueError, IndexError):
                         pass
 
