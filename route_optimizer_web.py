@@ -3353,13 +3353,28 @@ async function uploadRAG(input) {
   if (!input.files || !input.files[0]) return;
   var formData = new FormData();
   formData.append('file', input.files[0]);
-  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 중...</div>';
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 파싱 중...</div>';
   try {
-    var resp = await fetch('/api/rag-learn', {method: 'POST', body: formData});
+    var resp = await fetch('/api/rag-preview', {method: 'POST', body: formData});
     var data = await resp.json();
     if (data.success) {
-      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
-      loadRAGHistory();
+      window._ragPreview = data.preview;
+      var h = '<div class="alert alert-warning"><b>' + data.total_routes + '개 루트, ' + data.total_pos + '개 PO</b> — 확인 후 학습 버튼을 누르세요.</div>';
+      h += '<div class="table-responsive"><table class="table table-sm table-bordered small">';
+      h += '<thead class="table-dark"><tr><th>Route</th><th>Group</th><th>DC</th><th>PO</th><th>Qty</th><th>Loading</th><th>Pickup</th><th>APPT</th></tr></thead><tbody>';
+      data.preview.forEach(function(r) {
+        r.stops.forEach(function(s, si) {
+          h += '<tr' + (si===0?' style="border-top:2px solid #000;"':'') + '>';
+          h += '<td>' + (si===0?'R'+r.route:'') + '</td>';
+          h += '<td>' + (si===0?'<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>':'') + '</td>';
+          h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (s.pickup||'') + '</td><td>' + (s.appt||'') + '</td></tr>';
+        });
+      });
+      h += '</tbody></table></div>';
+      h += '<button class="btn btn-success" onclick="confirmRAG()"><i class="bi bi-check-lg"></i> 학습 확인</button> ';
+      h += '<button class="btn btn-outline-secondary" onclick="cancelRAG()">취소</button>';
+      document.getElementById('rag-status').innerHTML = h;
     } else {
       document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Error') + '</div>';
     }
@@ -3367,6 +3382,30 @@ async function uploadRAG(input) {
     document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
   }
   input.value = '';
+}
+
+async function confirmRAG() {
+  if (!window._ragPreview) return;
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 저장 중...</div>';
+  try {
+    var resp = await fetch('/api/rag-confirm', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({routes: window._ragPreview})});
+    var data = await resp.json();
+    if (data.success) {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+      window._ragPreview = null;
+      loadData();
+      loadRAGHistory();
+    } else {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error||'Error') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
+  }
+}
+
+function cancelRAG() {
+  window._ragPreview = null;
+  document.getElementById('rag-status').innerHTML = '';
 }
 
 async function loadRAGHistory() {
@@ -3960,13 +3999,28 @@ async function uploadRAG(input) {
   if (!input.files || !input.files[0]) return;
   var formData = new FormData();
   formData.append('file', input.files[0]);
-  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 중...</div>';
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 파싱 중...</div>';
   try {
-    var resp = await fetch('/api/rag-learn', {method: 'POST', body: formData});
+    var resp = await fetch('/api/rag-preview', {method: 'POST', body: formData});
     var data = await resp.json();
     if (data.success) {
-      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
-      loadRAGHistory();
+      window._ragPreview = data.preview;
+      var h = '<div class="alert alert-warning"><b>' + data.total_routes + '개 루트, ' + data.total_pos + '개 PO</b> — 확인 후 학습 버튼을 누르세요.</div>';
+      h += '<div class="table-responsive"><table class="table table-sm table-bordered small">';
+      h += '<thead class="table-dark"><tr><th>Route</th><th>Group</th><th>DC</th><th>PO</th><th>Qty</th><th>Loading</th><th>Pickup</th><th>APPT</th></tr></thead><tbody>';
+      data.preview.forEach(function(r) {
+        r.stops.forEach(function(s, si) {
+          h += '<tr' + (si===0?' style="border-top:2px solid #000;"':'') + '>';
+          h += '<td>' + (si===0?'R'+r.route:'') + '</td>';
+          h += '<td>' + (si===0?'<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>':'') + '</td>';
+          h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (s.pickup||'') + '</td><td>' + (s.appt||'') + '</td></tr>';
+        });
+      });
+      h += '</tbody></table></div>';
+      h += '<button class="btn btn-success" onclick="confirmRAG()"><i class="bi bi-check-lg"></i> 학습 확인</button> ';
+      h += '<button class="btn btn-outline-secondary" onclick="cancelRAG()">취소</button>';
+      document.getElementById('rag-status').innerHTML = h;
     } else {
       document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Error') + '</div>';
     }
@@ -3974,6 +4028,30 @@ async function uploadRAG(input) {
     document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
   }
   input.value = '';
+}
+
+async function confirmRAG() {
+  if (!window._ragPreview) return;
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 저장 중...</div>';
+  try {
+    var resp = await fetch('/api/rag-confirm', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({routes: window._ragPreview})});
+    var data = await resp.json();
+    if (data.success) {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+      window._ragPreview = null;
+      loadData();
+      loadRAGHistory();
+    } else {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error||'Error') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
+  }
+}
+
+function cancelRAG() {
+  window._ragPreview = null;
+  document.getElementById('rag-status').innerHTML = '';
 }
 
 async function loadRAGHistory() {
@@ -4051,12 +4129,11 @@ def rag_template():
         headers={"Content-Disposition": "attachment; filename=rag_training_template.xlsx"})
 
 
-@app.route("/api/rag-learn", methods=["POST"])
-def rag_learn():
-    """Upload past dispatch data for RAG learning."""
+@app.route("/api/rag-preview", methods=["POST"])
+def rag_preview():
+    """Upload and preview parsed dispatch data before learning."""
     from openpyxl import load_workbook
     from io import BytesIO
-    from route_optimizer import load_preferences, save_preferences, learn_from_result
 
     if "file" not in request.files:
         return jsonify({"success": False, "error": "No file"})
@@ -4126,39 +4203,53 @@ def rag_learn():
         })
         if pu: routes_map[route_num]["group"] = pu
 
-    # Convert to learning format and save
+    # Return preview data
+    preview = []
+    for rnum, rdata in sorted(routes_map.items(), key=lambda x: x[0]):
+        stops = []
+        for s in rdata["stops"]:
+            stops.append({"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "loading": s.get("loading",""), "pickup": s.get("pickup","")})
+        preview.append({"route": rnum, "group": rdata["group"], "stops": stops, "total_qty": sum(s["qty"] for s in rdata["stops"])})
+
+    return jsonify({"success": True, "preview": preview, "total_routes": len(preview), "total_pos": sum(len(r["stops"]) for r in preview)})
+
+
+@app.route("/api/rag-confirm", methods=["POST"])
+def rag_confirm():
+    """Confirm and save RAG learning data."""
+    from route_optimizer import load_preferences, save_preferences
+
+    data = request.get_json(force=True)
+    routes = data.get("routes", [])
+    if not routes:
+        return jsonify({"success": False, "error": "No routes"})
+
     prefs = load_preferences()
     if "rag_data" not in prefs: prefs["rag_data"] = []
+    pair_scores = prefs.get("pair_scores", {})
 
     rag_entry = {
         "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "total_pos": sum(len(r["stops"]) for r in routes_map.values()),
+        "total_pos": sum(len(r["stops"]) for r in routes),
         "routes": []
     }
 
-    # Learn pair scores from each route
-    pair_scores = prefs.get("pair_scores", {})
-    for rnum, rdata in routes_map.items():
-        dcs = [s["dc"] for s in rdata["stops"]]
-        total_qty = sum(s["qty"] for s in rdata["stops"])
-        appts = [s.get("appt","") for s in rdata["stops"] if s.get("appt")]
-        rag_entry["routes"].append({"route": rnum, "group": rdata["group"], "dcs": dcs, "total_qty": total_qty, "appts": appts})
+    for r in routes:
+        dcs = [s["dc"] for s in r["stops"]]
+        appts = [s.get("appt","") for s in r["stops"] if s.get("appt")]
+        rag_entry["routes"].append({"route": r["route"], "group": r["group"], "dcs": dcs, "total_qty": r["total_qty"], "appts": appts})
 
-        # Update pair scores
         for i in range(len(dcs)):
             for j in range(i+1, len(dcs)):
                 pair_key = "|".join(sorted([dcs[i], dcs[j]]))
-                pair_scores[pair_key] = pair_scores.get(pair_key, 0) + 2  # stronger weight for real data
+                pair_scores[pair_key] = pair_scores.get(pair_key, 0) + 2
 
     prefs["pair_scores"] = pair_scores
     prefs["rag_data"].append(rag_entry)
-    prefs["rag_data"] = prefs["rag_data"][-100:]  # keep last 100
+    prefs["rag_data"] = prefs["rag_data"][-100:]
     save_preferences(prefs)
 
-    return jsonify({
-        "success": True,
-        "message": f"{len(routes_map)}개 루트, {rag_entry['total_pos']}개 PO 학습 완료. DC 페어링 점수 업데이트됨."
-    })
+    return jsonify({"success": True, "message": f"{len(routes)}개 루트, {rag_entry['total_pos']}개 PO 학습 완료."})
 
 
 @app.route("/api/rag-history", methods=["GET"])
