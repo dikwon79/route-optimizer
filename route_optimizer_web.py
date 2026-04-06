@@ -1328,6 +1328,7 @@ function refreshAfterEdit(result) {
   // Update cost displays
   updateMapCosts(result);
   // Auto-run schedule after edit
+  window._autoScheduleFromEdit = true;
   setTimeout(function() { autoSchedule(); }, 300);
   // Update summary totals in the DOM
   var liveTotal = 0, liveRoutes = 0;
@@ -1992,9 +1993,16 @@ async function autoSchedule() {
       });
       msg += '\n';
     });
-    alert(msg);
+    console.log(msg);
 
-    renderResults(result, window._lastPayload);
+    // If in fullscreen or called from refreshAfterEdit, just update map
+    if (window._isFullscreen || window._autoScheduleFromEdit) {
+      window._autoScheduleFromEdit = false;
+      drawRoutes(result);
+      updateMapCosts(result);
+    } else {
+      renderResults(result, window._lastPayload);
+    }
   } catch(e) {
     if (btn) { btn.innerHTML = origText; btn.disabled = false; }
     alert('스케줄 결정 오류: ' + e.message);
