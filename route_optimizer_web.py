@@ -4183,6 +4183,8 @@ def rag_preview():
         pu = str(vals[col.get("pu", 0)] or "").strip().upper() if col.get("pu") is not None else ""
         due = str(vals[col.get("due", 0)] or "").strip() if col.get("due") is not None else ""
         appt = str(vals[col.get("appt", 0)] or "").strip() if col.get("appt") is not None else ""
+        if '->' in appt:
+            appt = appt.split('->')[-1].strip()
         pickup = str(vals[col.get("pickup", 0)] or "").strip() if col.get("pickup") is not None else ""
         loading = str(vals[col.get("loading", 0)] or "").strip() if col.get("loading") is not None else ""
 

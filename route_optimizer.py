@@ -438,8 +438,10 @@ def get_preferred_appt_hours() -> dict:
                 if i >= len(dcs) or not appt:
                     continue
                 dc = dcs[i]
-                # Parse APPT time: "March 16, 2026, 8:30 PM EDT" or "1/6 @4:00pm EST" etc
+                # Parse APPT time: handle "old -> new" format (use final value)
                 import re
+                if '->' in appt:
+                    appt = appt.split('->')[-1].strip()
                 # Try to extract hour
                 h = None
                 # Pattern: H:MM AM/PM
