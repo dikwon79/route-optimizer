@@ -776,12 +776,19 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
     top_candidates = sorted(candidates, key=lambda c: c["score"])[:5] if candidates else [best]
 
     depart_final = best["depart"]
-    pickup_date = depart_final - timedelta(days=1)
-    # No pickup on Sat/Sun - move to Friday
-    if pickup_date.weekday() == 5:
-        pickup_date = pickup_date - timedelta(days=1)
-    elif pickup_date.weekday() == 6:
-        pickup_date = pickup_date - timedelta(days=2)
+    # Pickup is always a weekday (Mon-Fri), before departure
+    # If departure is Mon -> pickup Friday (weekend storage)
+    # If departure is Tue-Fri -> pickup day before
+    # If departure is Sat/Sun -> pickup Friday
+    dep_wd = depart_final.weekday()
+    if dep_wd == 0:  # Monday departure -> Friday pickup
+        pickup_date = depart_final - timedelta(days=3)
+    elif dep_wd == 5:  # Saturday departure -> Friday pickup
+        pickup_date = depart_final - timedelta(days=1)
+    elif dep_wd == 6:  # Sunday departure -> Friday pickup
+        pickup_date = depart_final - timedelta(days=2)
+    else:  # Tue-Fri -> day before
+        pickup_date = depart_final - timedelta(days=1)
 
     return {
         "pickup": pickup_date.strftime("%Y-%m-%d") + " 10:00",
