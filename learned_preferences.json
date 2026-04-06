@@ -1,10 +1,10 @@
 {
   "pair_scores": {
-    "MI|MO": 1,
-    "NC|SE": 1,
+    "MI|MO": 3,
+    "NC|SE": 3,
     "FE|ME": 3,
-    "MG|MK": 1,
-    "MS|SZ": 3,
+    "MG|MK": 3,
+    "MS|SZ": 5,
     "HP|NT": 2,
     "HP|SW": 2,
     "NT|SW": 3,
@@ -12,15 +12,16 @@
     "NC|PA": 1,
     "MZ|NC": 1,
     "FE|SE": 1,
-    "ME|SE": 1,
+    "ME|SE": 3,
     "MY|NE": 2,
     "MD|SO": 2,
     "HP|MW": 1,
     "MN|NW": 1,
-    "MP|SZ": 2,
-    "MP|MS": 2,
+    "MP|SZ": 4,
+    "MP|MS": 4,
     "MW|NW": 1,
-    "MN|MO": 1
+    "MN|MO": 1,
+    "ME|NC": 2
   },
   "saved_results": [
     {
@@ -417,6 +418,101 @@
           "total_qty": 48,
           "appts": [
             "1/13 @ 8:30PM EST"
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-04-06 12:12",
+      "total_pos": 13,
+      "routes": [
+        {
+          "route": "1",
+          "group": "MS",
+          "dcs": [
+            "MG",
+            "MK"
+          ],
+          "total_qty": 16,
+          "appts": [
+            "12/ 07 @  8:30 PM EST",
+            "12 08  @  8:00 PM EST"
+          ]
+        },
+        {
+          "route": "2",
+          "group": "MS",
+          "dcs": [
+            "MI",
+            "MO"
+          ],
+          "total_qty": 30,
+          "appts": [
+            "12/ 07 @   8:00 PM CST",
+            "12/08 @ 9:00 PM CST"
+          ]
+        },
+        {
+          "route": "3",
+          "group": "MS",
+          "dcs": [
+            "SO"
+          ],
+          "total_qty": 8,
+          "appts": [
+            "12/ 03  @  8:00 PM CST"
+          ]
+        },
+        {
+          "route": "4",
+          "group": "MS",
+          "dcs": [
+            "NC",
+            "SE",
+            "ME"
+          ],
+          "total_qty": 26,
+          "appts": [
+            "December 02, 2025, 2:00 PM EST",
+            "December 03, 2025, 10:00 PM EST",
+            "December 04, 2025, 11:00 PM EST"
+          ]
+        },
+        {
+          "route": "5",
+          "group": "MS",
+          "dcs": [
+            "NE"
+          ],
+          "total_qty": 6,
+          "appts": [
+            "12/02   @  8:00 PM EST"
+          ]
+        },
+        {
+          "route": "6",
+          "group": "L1",
+          "dcs": [
+            "NW"
+          ],
+          "total_qty": 2,
+          "appts": [
+            "12/3 @  12:00 AM PST"
+          ]
+        },
+        {
+          "route": "7",
+          "group": "MS",
+          "dcs": [
+            "MP",
+            "SZ",
+            "MS"
+          ],
+          "total_qty": 16,
+          "appts": [
+            "12/01 @  3:00 PM PST",
+            "12/02 @  9:00 PM PST",
+            "12/03 @  2:00 PM MST"
           ]
         }
       ]

@@ -4176,11 +4176,22 @@ def rag_preview():
     current_route = 0
     has_route_col = "route" in col
 
+    import sys
+    print(f"RAG headers: {headers}", file=sys.stderr)
+    print(f"RAG col map: {col}", file=sys.stderr)
+    row_count = 0
+    skip_count = 0
+    last_pu = "MS"  # carry-forward for merged PU FROM cells
     for row in ws.iter_rows(min_row=2, values_only=True):
         vals = list(row)
+        row_count += 1
         
-        dc = str(vals[col["dc"]] or "").strip().upper() if col.get("dc") is not None else ""
-        if not dc: continue
+        dc = str(vals[col["dc"]] or "").strip().upper() if col.get("dc") is not None and col["dc"] < len(vals) else ""
+        if not dc:
+            skip_count += 1
+            if row_count <= 5 or row_count % 10 == 0:
+                print(f"RAG row {row_count} SKIP: dc empty, vals={[str(v)[:20] if v else '' for v in vals[:6]]}", file=sys.stderr)
+            continue
         
         po = str(vals[col.get("po", 0)] or "").strip() if col.get("po") is not None else ""
         qty = 0
@@ -4188,6 +4199,10 @@ def rag_preview():
             try: qty = int(float(str(vals[col["qty"]] or 0).replace(",","")))
             except: pass
         pu = str(vals[col.get("pu", 0)] or "").strip().upper() if col.get("pu") is not None else ""
+        if pu:
+            last_pu = pu  # update carry-forward
+        else:
+            pu = last_pu  # inherit from previous row (merged cell)
         due = str(vals[col.get("due", 0)] or "").strip() if col.get("due") is not None else ""
         appt = str(vals[col.get("appt", 0)] or "").strip() if col.get("appt") is not None else ""
         if '->' in appt:
@@ -4220,6 +4235,7 @@ def rag_preview():
             stops.append({"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "loading": s.get("loading",""), "pickup": s.get("pickup","")})
         preview.append({"route": rnum, "group": rdata["group"], "stops": stops, "total_qty": sum(s["qty"] for s in rdata["stops"])})
 
+    print(f"RAG parse: {row_count} rows, {skip_count} skipped, {len(routes_map)} routes", file=sys.stderr)
     return jsonify({"success": True, "preview": preview, "total_routes": len(preview), "total_pos": sum(len(r["stops"]) for r in preview)})
 
 
