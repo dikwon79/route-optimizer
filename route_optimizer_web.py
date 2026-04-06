@@ -2719,10 +2719,8 @@ def download_template():
         for c, val in enumerate(row_data, 1):
             cell = ws.cell(row=r, column=c, value=val)
             cell.border = border
-            if c == 1:  # SHIP TO column - wrap text
+            if c == 2:  # SHIP TO - wrap text
                 cell.alignment = wrap_align
-            if c in (5, 7):  # QTY columns - number format
-                cell.number_format = num_fmt
         ws.row_dimensions[r].height = 45
 
     # Warehouse list sheet
@@ -4098,28 +4096,34 @@ def rag_template():
     border = Border(left=Side(style="thin"), right=Side(style="thin"),
                     top=Side(style="thin"), bottom=Side(style="thin"))
 
-    headers = [("PU FROM", 8), ("DC", 8), ("PO #", 22),
-               ("QTY (PALLETS)", 14), ("Loading", 10), ("PICK UP", 18), ("APPT (Delivery)", 25), ("DUE DATE", 12)]
-    col_letters = 'ABCDEFGH'
+    headers = [("PU from", 10), ("SHIP TO", 45), ("DC", 8), ("PO #", 22),
+               ("QTY\n(PALLETS)", 12), ("Loading", 10), ("PICK UP", 18), ("APPT  (Delivery)", 28), ("Hours", 8), ("Due date", 12), ("WAVE", 8)]
+    col_letters = 'ABCDEFGHIJK'
     for col, (name, width) in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=name)
         cell.font = hfont; cell.fill = hfill; cell.alignment = halign; cell.border = border
         ws.column_dimensions[col_letters[col-1]].width = width
 
     samples = [
-        ("MS", "MG", "MG10189076-01", 40, "Tail", "3/13 @ 11am", "March 16, 2026, 8:30 PM EDT", "3/24"),
-        ("MS", "MK", "MK10090088-01", 20, "Nose", "", "March 17, 2026, 8:00 PM EDT", "3/24"),
-        ("MS", "SE", "SE10198234-01", 36, "Tail", "3/13 @ 12pm", "March 16, 2026, 11:00 PM EDT", "3/24"),
-        ("MS", "FE", "FE10190732-01", 8, "Middle", "", "March 17, 2026, 6:00 PM EDT", "3/24"),
-        ("MS", "ME", "ME10132021-01", 12, "Nose", "", "March 17, 2026, 7:00 PM EDT", "3/24"),
-        ("MS", "MN", "MN10098698-01", 20, "-", "3/16 @ 11am", "March 17, 2026, 7:00 PM CDT", "3/24"),
-        ("L1", "NW", "NW10089277-01", 4, "Tail", "3/13 @ 12pm", "March 15, 2026, 8:00 PM PDT", "3/24"),
-        ("L1", "MW", "MW10094380-01", 44, "Nose", "", "March 17, 2026, 8:00 PM MDT", "3/24"),
+        ("MS", "MCLANE OHIO\n3200 MCLANE DRIVE\nFINDLAY, OH 45840", "MG", "MG10186484-01", 48, "-", "1/12 @ 2pm", "1/13 @ 8:30PM EST", 6, "1/13", 46),
+        ("", "MCLANE CUMBERLAND\n104 MCLANE BLVD\nNICHOLASVILLE, KY 40356", "MK", "MK10087938-01", 20, "-", "1/7 @ 11am", "1/8 @8:00PM EST", 10, "1/13", 46),
+        ("", "MCLANE PA\n43 VALLY VIEW BUSINESS PA\nJESSUP, PA 18434", "PA", "PA10083786-01", 20, "Tail", "1/5 @ 3pm", "1/6 @ 7:00AM EST", 7, "1/13", 46),
+        ("", "MCLANE MID-ATLANTIC\n56 MCLANE DRIVE\nFredricksburg, VA 22406", "MZ", "MZ10081807-01", 10, "Middle", "", "1/6 @4:00pm EST", 5, "1/13", 46),
+        ("", "MCLANE CAROLINA\n7253 NC-4\nBATTLEBORO, NC 27809", "NC", "NC10094703-01", 20, "Nose", "", "1/7 @ 3:30PM EST", 3, "1/13", 46),
+        ("", "MCLANE SOUTHEAST\n300 NORTH HWY 29\nATHENS, GA 30601", "SE", "SE10193724-01", 20, "Tail", "1/5 @ 1pm", "1/7 @ 11:00PM EST", 16, "1/13", 46),
+        ("", "MCLANE OCALA\n910 NW 50TH AVE\nOCALA, FL 34482", "FE", "FE10187784-01", 10, "Middle", "", "1/8 @6:00PM EST", 6, "1/13", 46),
+        ("", "MCLANE SUNEAST\n1818 POINCIANA BLVD\nKISSIMMEE, FL 34758", "ME", "ME10127808-01", 20, "Nose", "", "1/8 @11:00PM EST", 2, "1/13", 46),
+        ("L1", "MCLANE NORTHWEST\n9611 45TH AVE SW BLDG 4\nLAKEWOOD, WA 98499", "NW", "NW10086469-01", 4, "Tail", "1/3 @ 12pm", "1/4 @8:00PM PST", 4, "1/13", 46),
+        ("", "MCLANE WESTERN\n2100 E KEN PRATT BLVD\nLONGMONT, CO 80504", "MW", "MW10093811-01", 44, "Nose", "", "1/6 @8:00PM MST", 20, "1/13", 46),
     ]
+    wrap_align = Alignment(vertical="top", wrap_text=True)
     for r, row_data in enumerate(samples, 2):
         for c, val in enumerate(row_data, 1):
             cell = ws.cell(row=r, column=c, value=val)
             cell.border = border
+            if c == 2:  # SHIP TO - wrap text
+                cell.alignment = wrap_align
+        ws.row_dimensions[r].height = 45
 
     buf = BytesIO()
     wb.save(buf)
@@ -4146,13 +4150,16 @@ def rag_preview():
     col = {}
     for i, h in enumerate(headers):
         if h == "ROUTE": col["route"] = i
-        elif h == "PU FROM": col["pu"] = i
+        elif "PU" in h and "FROM" in h: col["pu"] = i
+        elif "SHIP" in h and "TO" in h: col["shipto"] = i
         elif h == "DC": col["dc"] = i
         elif "PO" in h and "#" in h: col["po"] = i
         elif "QTY" in h or "PALLET" in h: col["qty"] = i
         elif "PICK" in h: col["pickup"] = i
-        elif "APPT" in h or "DELIVERY" in h and "DUE" not in h: col["appt"] = i
+        elif "APPT" in h or ("DELIVERY" in h and "DUE" not in h): col["appt"] = i
+        elif "HOUR" in h or h == "HRS": col["hours"] = i
         elif "DUE" in h: col["due"] = i
+        elif "WAVE" in h: col["wave"] = i
 
     if "dc" not in col:
         return jsonify({"success": False, "error": "DC 컬럼이 필요합니다."})
