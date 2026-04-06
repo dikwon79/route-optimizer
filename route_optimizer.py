@@ -446,7 +446,7 @@ def get_preferred_appt_hours() -> dict:
                     parts = [p.strip() for p in appt.split('->')]
                     all_appts = parts
                     original_appt = parts[0]
-                    appt = parts[-1]  # use final value for preferred hour
+                    appt = parts[0]  # use FIRST value (original plan) for preferred hour
                 # Try to extract hour
                 h = None
                 # Pattern: H:MM AM/PM
