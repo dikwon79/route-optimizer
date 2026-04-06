@@ -723,8 +723,8 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                 except (ValueError, IndexError):
                     pass
 
-            # Multi-stop (3+): prefer first stop arriving on Monday
-            if len(sched) >= 3:
+            # Multi-stop (2+): prefer first stop arriving on Monday
+            if len(sched) >= 2:
                 try:
                     fa = sched[0].get("arrival_time", "").split(" ")
                     fa_dt3 = datetime.strptime(fa[0] + " " + fa[1], "%Y-%m-%d %H:%M")
