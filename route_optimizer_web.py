@@ -4222,7 +4222,7 @@ def rag_preview():
         appt_history = []
         if '->' in appt_raw:
             appt_history = [p.strip() for p in appt_raw.split('->')]
-            appt = appt_history[-1]  # final value
+            appt = appt_history[0]  # first value (original plan) for learning
         else:
             appt = appt_raw
         pickup = str(vals[col.get("pickup", 0)] or "").strip() if col.get("pickup") is not None else ""
