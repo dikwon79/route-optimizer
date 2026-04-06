@@ -2561,7 +2561,7 @@ def api_auto_schedule():
     o_tz = ORIGIN_TZ.get(origin_name, ZoneInfo("America/New_York"))
     cache = load_cache()
 
-    from route_optimizer import distribute_pickup_times
+    from route_optimizer import distribute_pickup_times, balance_departure_dates
 
     results = []
     for rt in routes:
@@ -2569,6 +2569,7 @@ def api_auto_schedule():
         results.append(sched)
 
     # Distribute pickup times so same-day routes get different hours
+    results = balance_departure_dates(results)
     results = distribute_pickup_times(results)
 
     # Re-simulate routes with actual departure times (not pickup)

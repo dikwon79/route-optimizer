@@ -560,6 +560,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
     picking_hours = [6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22]  # wider range for better window matching
     best = None
     best_score = float('inf')
+    candidates = []
     days_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 
     # Try each day in the search window
@@ -755,34 +756,39 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             elif depart_dt.hour >= 20 or depart_dt.hour <= 5:
                 score += 10
             
-            if score < best_score:
-                best_score = score
-                best = {
+            candidates.append({
                     "depart": depart_dt,
                     "result": result,
                     "total_wait": round(total_wait, 1),
                     "weekday": weekday,
-                }
+                    "score": score,
+                })
+            if score < best_score:
+                best_score = score
+                best = candidates[-1]
 
     if best is None:
-        # Fallback: just use target date
         depart_dt = target_start.replace(hour=10)
         result = evaluate_route(origin_coord, po_list, depart_dt, cache, origin_tz_info)
-        best = {"depart": depart_dt, "result": result, "total_wait": 0, "weekday": depart_dt.weekday()}
+        best = {"depart": depart_dt, "result": result, "total_wait": 0, "weekday": depart_dt.weekday(), "score": 9999}
+
+    # Store top candidates for balancing
+    top_candidates = sorted(candidates, key=lambda c: c["score"])[:5] if candidates else [best]
 
     depart_final = best["depart"]
     pickup_date = depart_final - timedelta(days=1)
     # No pickup on Sat/Sun - move to Friday
-    if pickup_date.weekday() == 5:  # Saturday
-        pickup_date = pickup_date - timedelta(days=1)  # Friday
-    elif pickup_date.weekday() == 6:  # Sunday
-        pickup_date = pickup_date - timedelta(days=2)  # Friday
+    if pickup_date.weekday() == 5:
+        pickup_date = pickup_date - timedelta(days=1)
+    elif pickup_date.weekday() == 6:
+        pickup_date = pickup_date - timedelta(days=2)
 
     return {
         "pickup": pickup_date.strftime("%Y-%m-%d") + " 10:00",
         "pickup_day": days_name[pickup_date.weekday()],
         "departure": depart_final.strftime("%Y-%m-%d %H:%M"),
         "departure_day": days_name[depart_final.weekday()],
+        "top_candidates": [{"depart": c["depart"].strftime("%Y-%m-%d %H:%M"), "score": round(c["score"],1), "wait": c["total_wait"]} for c in top_candidates],
         "travel_hours_first_stop": round(first_travel, 1),
         "friday_rule": is_long_haul,
         "target_arrival": (earliest_due - timedelta(days=10)).strftime("%Y-%m-%d"),
@@ -790,6 +796,63 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
         "total_wait_hours": best["total_wait"],
         "simulated_route": best["result"],
     }
+
+
+def balance_departure_dates(schedules: List[dict]) -> List[dict]:
+    """Balance departure dates so not too many routes depart on the same day.
+    Max 3 departures per day. If exceeded, move lowest-priority routes to alternative dates."""
+    MAX_PER_DAY = 3
+    
+    # Count departures per date
+    by_date = {}
+    for i, s in enumerate(schedules):
+        dep = s.get("departure", "")[:10]
+        if dep:
+            if dep not in by_date:
+                by_date[dep] = []
+            by_date[dep].append(i)
+    
+    # Find overloaded dates
+    for date_key, indices in list(by_date.items()):
+        if len(indices) <= MAX_PER_DAY:
+            continue
+        
+        # Sort by score (higher score = easier to move)
+        scored = []
+        for idx in indices:
+            top = schedules[idx].get("top_candidates", [])
+            scored.append((idx, top))
+        
+        # Keep the best MAX_PER_DAY, try to move the rest
+        # Routes with more alternative candidates are easier to move
+        scored.sort(key=lambda x: len(x[1]), reverse=True)
+        to_move = scored[MAX_PER_DAY:]
+        
+        for idx, top_cands in to_move:
+            # Find an alternative date that's not overloaded
+            for cand in top_cands:
+                alt_date = cand["depart"][:10]
+                if alt_date == date_key:
+                    continue
+                alt_count = len(by_date.get(alt_date, []))
+                if alt_count < MAX_PER_DAY:
+                    # Move to this date
+                    schedules[idx]["departure"] = cand["depart"]
+                    dep_dt = datetime.strptime(cand["depart"], "%Y-%m-%d %H:%M")
+                    schedules[idx]["departure_day"] = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][dep_dt.weekday()]
+                    pickup_date = dep_dt - timedelta(days=1)
+                    if pickup_date.weekday() == 5: pickup_date -= timedelta(days=1)
+                    elif pickup_date.weekday() == 6: pickup_date -= timedelta(days=2)
+                    schedules[idx]["pickup"] = pickup_date.strftime("%Y-%m-%d") + " 10:00"
+                    schedules[idx]["pickup_day"] = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][pickup_date.weekday()]
+                    
+                    # Update by_date
+                    by_date[date_key].remove(idx)
+                    if alt_date not in by_date: by_date[alt_date] = []
+                    by_date[alt_date].append(idx)
+                    break
+    
+    return schedules
 
 
 def distribute_pickup_times(schedules: List[dict]) -> List[dict]:
