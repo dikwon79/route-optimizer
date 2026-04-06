@@ -3361,12 +3361,15 @@ async function uploadRAG(input) {
       h += '<div class="table-responsive"><table class="table table-sm table-bordered small">';
       h += '<thead class="table-dark"><tr><th>Route</th><th>Group</th><th>DC</th><th>PO</th><th>Qty</th><th>Loading</th><th>Pickup</th><th>APPT</th></tr></thead><tbody>';
       data.preview.forEach(function(r) {
+        var grpBadge = '<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>';
+        var routePickup = r.stops.find(function(s){return s.pickup;});
+        var pickupStr = routePickup ? routePickup.pickup : '';
         r.stops.forEach(function(s, si) {
           h += '<tr' + (si===0?' style="border-top:2px solid #000;"':'') + '>';
-          h += '<td>' + (si===0?'R'+r.route:'') + '</td>';
-          h += '<td>' + (si===0?'<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>':'') + '</td>';
+          h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
+          h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          h += '<td>' + (s.loading||'-') + '</td><td>' + (s.pickup||'') + '</td><td>' + (s.appt||'') + '</td></tr>';
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + (s.appt||'') + '</td></tr>';
         });
       });
       h += '</tbody></table></div>';
@@ -4007,12 +4010,15 @@ async function uploadRAG(input) {
       h += '<div class="table-responsive"><table class="table table-sm table-bordered small">';
       h += '<thead class="table-dark"><tr><th>Route</th><th>Group</th><th>DC</th><th>PO</th><th>Qty</th><th>Loading</th><th>Pickup</th><th>APPT</th></tr></thead><tbody>';
       data.preview.forEach(function(r) {
+        var grpBadge = '<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>';
+        var routePickup = r.stops.find(function(s){return s.pickup;});
+        var pickupStr = routePickup ? routePickup.pickup : '';
         r.stops.forEach(function(s, si) {
           h += '<tr' + (si===0?' style="border-top:2px solid #000;"':'') + '>';
-          h += '<td>' + (si===0?'R'+r.route:'') + '</td>';
-          h += '<td>' + (si===0?'<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>':'') + '</td>';
+          h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
+          h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          h += '<td>' + (s.loading||'-') + '</td><td>' + (s.pickup||'') + '</td><td>' + (s.appt||'') + '</td></tr>';
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + (s.appt||'') + '</td></tr>';
         });
       });
       h += '</tbody></table></div>';
@@ -4227,9 +4233,12 @@ def rag_preview():
         })
         if pu: routes_map[route_num]["group"] = pu
 
-    # Return preview data
+    # Return preview data, sort numerically
     preview = []
-    for rnum, rdata in sorted(routes_map.items(), key=lambda x: x[0]):
+    def route_sort_key(item):
+        try: return int(item[0])
+        except: return 999
+    for rnum, rdata in sorted(routes_map.items(), key=route_sort_key):
         stops = []
         for s in rdata["stops"]:
             stops.append({"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "loading": s.get("loading",""), "pickup": s.get("pickup","")})
