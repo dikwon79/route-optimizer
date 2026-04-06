@@ -422,6 +422,57 @@ def compute_arrival_time(
     return depart + timedelta(hours=travel_hours)
 
 
+def get_preferred_appt_hours() -> dict:
+    """Get preferred delivery hours per DC from RAG learning data.
+    Returns dict like {'MG': 20.5, 'MK': 20.0} (hour in 24h format).
+    """
+    prefs = load_preferences()
+    rag_data = prefs.get("rag_data", [])
+    
+    dc_hours = {}  # dc -> list of hours
+    for entry in rag_data:
+        for route in entry.get("routes", []):
+            dcs = route.get("dcs", [])
+            appts = route.get("appts", [])
+            for i, appt in enumerate(appts):
+                if i >= len(dcs) or not appt:
+                    continue
+                dc = dcs[i]
+                # Parse APPT time: "March 16, 2026, 8:30 PM EDT" or "1/6 @4:00pm EST" etc
+                import re
+                # Try to extract hour
+                h = None
+                # Pattern: H:MM AM/PM
+                m = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)', appt)
+                if m:
+                    h = int(m.group(1))
+                    mins = int(m.group(2))
+                    if m.group(3).upper() == 'PM' and h != 12:
+                        h += 12
+                    if m.group(3).upper() == 'AM' and h == 12:
+                        h = 0
+                    h += mins / 60.0
+                else:
+                    # Pattern: HAM/PM
+                    m2 = re.search(r'(\d{1,2})\s*(AM|PM|am|pm)', appt)
+                    if m2:
+                        h = int(m2.group(1))
+                        if m2.group(2).upper() == 'PM' and h != 12:
+                            h += 12
+                        if m2.group(2).upper() == 'AM' and h == 12:
+                            h = 0
+                if h is not None:
+                    if dc not in dc_hours:
+                        dc_hours[dc] = []
+                    dc_hours[dc].append(h)
+    
+    # Average
+    result = {}
+    for dc, hours in dc_hours.items():
+        result[dc] = round(sum(hours) / len(hours), 1)
+    return result
+
+
 def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                         origin_tz_info: ZoneInfo, cache: dict) -> dict:
     """
@@ -574,6 +625,25 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             if is_long_haul and weekday not in (3, 4, 5):
                 score += 20
             
+            # RAG: bonus if arrival matches past APPT patterns
+            pref_appts = get_preferred_appt_hours()
+            for si3, stop3 in enumerate(sched):
+                dc3 = stop3.get("dc_code", "")
+                if dc3 in pref_appts:
+                    try:
+                        sa3 = stop3.get("adjusted_arrival", "").split(" ")
+                        sa3_dt = datetime.strptime(sa3[0] + " " + sa3[1], "%Y-%m-%d %H:%M")
+                        arr_hour = sa3_dt.hour + sa3_dt.minute / 60.0
+                        pref_hour = pref_appts[dc3]
+                        diff_h = abs(arr_hour - pref_hour)
+                        if diff_h > 12: diff_h = 24 - diff_h  # wrap around midnight
+                        if diff_h <= 1:
+                            score -= 20  # great: within 1h of usual APPT
+                        elif diff_h <= 3:
+                            score -= 10  # good: within 3h
+                    except (ValueError, IndexError):
+                        pass
+
             # First stop: prefer arriving 1-3h before operating window opens
             if len(sched) > 0:
                 try:

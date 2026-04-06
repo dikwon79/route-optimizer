@@ -324,5 +324,102 @@
       ],
       "total_cost": 126906.38
     }
+  ],
+  "rag_data": [
+    {
+      "date": "2026-01-05",
+      "total_pos": 13,
+      "routes": [
+        {
+          "route": "1",
+          "group": "MS",
+          "dcs": [
+            "PA",
+            "MZ",
+            "NC"
+          ],
+          "total_qty": 50,
+          "appts": [
+            "1/6 @7:00AM EST",
+            "1/6 @4:00pm EST",
+            "1/7 @ 3:30PM EST"
+          ]
+        },
+        {
+          "route": "2",
+          "group": "MS",
+          "dcs": [
+            "NE",
+            "MY"
+          ],
+          "total_qty": 16,
+          "appts": [
+            "1/7 @ 10:00PM EST",
+            "1/8 @8:00PM EST"
+          ]
+        },
+        {
+          "route": "3",
+          "group": "MS",
+          "dcs": [
+            "SO",
+            "MD"
+          ],
+          "total_qty": 30,
+          "appts": [
+            "1/11 @7:00PM CST",
+            "1/12 @8:00PM CST"
+          ]
+        },
+        {
+          "route": "4",
+          "group": "MS",
+          "dcs": [
+            "SE",
+            "FE",
+            "ME"
+          ],
+          "total_qty": 50,
+          "appts": [
+            "1/7 @ 11:00PM EST",
+            "1/8 @6:00PM EST",
+            "1/8 @11:00PM EST"
+          ]
+        },
+        {
+          "route": "5",
+          "group": "MS",
+          "dcs": [
+            "MO"
+          ],
+          "total_qty": 40,
+          "appts": [
+            "1/8 @ 10:00PM CST"
+          ]
+        },
+        {
+          "route": "6",
+          "group": "MS",
+          "dcs": [
+            "MK"
+          ],
+          "total_qty": 20,
+          "appts": [
+            "1/8 @8:00PM EST"
+          ]
+        },
+        {
+          "route": "7",
+          "group": "MS",
+          "dcs": [
+            "MG"
+          ],
+          "total_qty": 48,
+          "appts": [
+            "1/13 @ 8:30PM EST"
+          ]
+        }
+      ]
+    }
   ]
 }
