@@ -703,8 +703,15 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             # No weekend pickup: if departure requires Sat/Sun pickup, big penalty
             pickup_day = (depart_dt - timedelta(days=1)).weekday()
             if pickup_day in (5, 6):  # Sat, Sun pickup needed
-                score += 50  # strong penalty
+                score += 50
 
+            # Short haul: prefer Mon departure (Fri pickup)
+            if not is_long_haul:
+                if weekday == 0:  # Monday
+                    score -= 15  # best for short haul
+                elif weekday in (1, 2, 3):  # Tue-Thu
+                    score -= 5
+            
             # Penalize Friday arrival (risky - any delay = miss weekend)
             for si2, stop2 in enumerate(sched):
                 try:
