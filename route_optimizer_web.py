@@ -4283,7 +4283,8 @@ def rag_confirm():
     for r in routes:
         dcs = [s["dc"] for s in r["stops"]]
         appts = [s.get("appt","") for s in r["stops"] if s.get("appt")]
-        rag_entry["routes"].append({"route": r["route"], "group": r["group"], "dcs": dcs, "total_qty": r["total_qty"], "appts": appts})
+        appt_changes = [s.get("appt_history",[]) for s in r["stops"] if s.get("appt_history")]
+        rag_entry["routes"].append({"route": r["route"], "group": r["group"], "dcs": dcs, "total_qty": r["total_qty"], "appts": appts, "appt_changes": appt_changes})
 
         for i in range(len(dcs)):
             for j in range(i+1, len(dcs)):
