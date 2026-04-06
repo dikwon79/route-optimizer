@@ -2,25 +2,25 @@
   "pair_scores": {
     "MI|MO": 3,
     "NC|SE": 3,
-    "FE|ME": 3,
+    "FE|ME": 7,
     "MG|MK": 3,
-    "MS|SZ": 5,
-    "HP|NT": 2,
-    "HP|SW": 2,
-    "NT|SW": 3,
-    "MZ|PA": 2,
-    "NC|PA": 1,
-    "MZ|NC": 1,
-    "FE|SE": 1,
-    "ME|SE": 3,
-    "MY|NE": 2,
-    "MD|SO": 2,
-    "HP|MW": 1,
-    "MN|NW": 1,
-    "MP|SZ": 4,
-    "MP|MS": 4,
-    "MW|NW": 1,
-    "MN|MO": 1,
+    "MS|SZ": 9,
+    "HP|NT": 4,
+    "HP|SW": 4,
+    "NT|SW": 7,
+    "MZ|PA": 6,
+    "NC|PA": 3,
+    "MZ|NC": 3,
+    "FE|SE": 3,
+    "ME|SE": 5,
+    "MY|NE": 6,
+    "MD|SO": 6,
+    "HP|MW": 3,
+    "MN|NW": 3,
+    "MP|SZ": 8,
+    "MP|MS": 8,
+    "MW|NW": 3,
+    "MN|MO": 3,
     "ME|NC": 2
   },
   "saved_results": [
@@ -513,6 +513,324 @@
             "12/01 @  3:00 PM PST",
             "12/02 @  9:00 PM PST",
             "12/03 @  2:00 PM MST"
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-04-06 13:10",
+      "total_pos": 23,
+      "routes": [
+        {
+          "route": "1",
+          "group": "MS",
+          "dcs": [
+            "MG"
+          ],
+          "total_qty": 20,
+          "appts": [
+            "12/30,@10:00 AM EST"
+          ]
+        },
+        {
+          "route": "2",
+          "group": "MS",
+          "dcs": [
+            "MK"
+          ],
+          "total_qty": 27,
+          "appts": [
+            "12/17 @11:00 PM EST"
+          ]
+        },
+        {
+          "route": "3",
+          "group": "MS",
+          "dcs": [
+            "SO",
+            "MD"
+          ],
+          "total_qty": 22,
+          "appts": [
+            "12/21 @ 9:00 PM CST",
+            "12/23 @ 1:00 AM CST"
+          ]
+        },
+        {
+          "route": "4",
+          "group": "MS",
+          "dcs": [
+            "NC"
+          ],
+          "total_qty": 18,
+          "appts": [
+            "12/22 @3:30 PM EST"
+          ]
+        },
+        {
+          "route": "5",
+          "group": "MS",
+          "dcs": [
+            "PA",
+            "MZ"
+          ],
+          "total_qty": 24,
+          "appts": [
+            "12/30 @ 7:00 AM EST",
+            "12/30 @4:00 PM EST"
+          ]
+        },
+        {
+          "route": "6",
+          "group": "MS",
+          "dcs": [
+            "SE"
+          ],
+          "total_qty": 12,
+          "appts": [
+            "12/30 @9:00PM EST"
+          ]
+        },
+        {
+          "route": "7",
+          "group": "MS",
+          "dcs": [
+            "FE",
+            "ME"
+          ],
+          "total_qty": 26,
+          "appts": [
+            "12/21 @ 4:00 PM EST",
+            "12/21 @9:00PM EST"
+          ]
+        },
+        {
+          "route": "8",
+          "group": "MS",
+          "dcs": [
+            "NE",
+            "MY"
+          ],
+          "total_qty": 12,
+          "appts": [
+            "12/17 @8:00PM EST",
+            "12/18 @ 8:00 PM EST"
+          ]
+        },
+        {
+          "route": "9",
+          "group": "L1",
+          "dcs": [
+            "NW",
+            "MW"
+          ],
+          "total_qty": 22,
+          "appts": [
+            "12/15 @ 11:00 PM PST",
+            "12/18 @ 8:00 PM MST"
+          ]
+        },
+        {
+          "route": "10",
+          "group": "L1",
+          "dcs": [
+            "MP",
+            "SZ",
+            "MS"
+          ],
+          "total_qty": 42,
+          "appts": [
+            "12/ 15, 2025, 5:00 PM PST",
+            "12/16, 2025, 9:00 PM PST",
+            "12/ 17, 2025, 1:00 PM USMST"
+          ]
+        },
+        {
+          "route": "11",
+          "group": "L1",
+          "dcs": [
+            "HP",
+            "NT",
+            "SW"
+          ],
+          "total_qty": 38,
+          "appts": [
+            "12/15, 2025, 7:00 PM CST",
+            "12/16 @  7:00PM  CST",
+            "12/17, 2025, 8:00 PM CST"
+          ]
+        },
+        {
+          "route": "12",
+          "group": "L1",
+          "dcs": [
+            "MN",
+            "MO"
+          ],
+          "total_qty": 40,
+          "appts": [
+            "12/17 @8:00PM CST",
+            "12/18 @ 9:00PM  CST"
+          ]
+        },
+        {
+          "route": "13",
+          "group": "L1",
+          "dcs": [
+            "MI"
+          ],
+          "total_qty": 36,
+          "appts": [
+            "12/18 @ 9:00 AM CST"
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-04-06 13:12",
+      "total_pos": 22,
+      "routes": [
+        {
+          "route": "1",
+          "group": "MS",
+          "dcs": [
+            "PA",
+            "MZ",
+            "NC"
+          ],
+          "total_qty": 50,
+          "appts": [
+            "1/6 @ 7:00AM EST",
+            "1/6 @4:00pm EST",
+            "1/7 @ 3:30PM EST"
+          ]
+        },
+        {
+          "route": "2",
+          "group": "MS",
+          "dcs": [
+            "NE",
+            "MY"
+          ],
+          "total_qty": 16,
+          "appts": [
+            "1/7 @ 10:00PM EST",
+            "1/8 @8:00PM EST"
+          ]
+        },
+        {
+          "route": "3",
+          "group": "MS",
+          "dcs": [
+            "SO",
+            "MD"
+          ],
+          "total_qty": 30,
+          "appts": [
+            "1/11 @7:00PM CST",
+            "1/12 @8:00PM CST"
+          ]
+        },
+        {
+          "route": "4",
+          "group": "MS",
+          "dcs": [
+            "SE",
+            "FE",
+            "ME"
+          ],
+          "total_qty": 50,
+          "appts": [
+            "1/7 @ 11:00PM EST",
+            "1/8 @6:00PM EST",
+            "1/8 @11:00PM TBC"
+          ]
+        },
+        {
+          "route": "5",
+          "group": "MS",
+          "dcs": [
+            "MO"
+          ],
+          "total_qty": 40,
+          "appts": [
+            "1/8 @ 10:00PM CST"
+          ]
+        },
+        {
+          "route": "6",
+          "group": "MS",
+          "dcs": [
+            "MK"
+          ],
+          "total_qty": 20,
+          "appts": [
+            "1/8 @8:00PM EST"
+          ]
+        },
+        {
+          "route": "7",
+          "group": "MS",
+          "dcs": [
+            "MG"
+          ],
+          "total_qty": 48,
+          "appts": [
+            "1/13   @ 8:30PM EST"
+          ]
+        },
+        {
+          "route": "8",
+          "group": "L1",
+          "dcs": [
+            "NT",
+            "SW"
+          ],
+          "total_qty": 52,
+          "appts": [
+            "1/05 @  8:00 PM CST",
+            "1/6 @ 7:00 PM CST"
+          ]
+        },
+        {
+          "route": "9",
+          "group": "L1",
+          "dcs": [
+            "MW",
+            "HP"
+          ],
+          "total_qty": 40,
+          "appts": [
+            "1/12, @ 8:00 PM MST",
+            "1/ 13, @  7:00 PM CST"
+          ]
+        },
+        {
+          "route": "10",
+          "group": "L1",
+          "dcs": [
+            "MP",
+            "SZ",
+            "MS"
+          ],
+          "total_qty": 34,
+          "appts": [
+            "1/05, @ 7:00 PM PST",
+            "1/06, @  9:00 PM PST",
+            "1/ 07, @ 4:00 PM USMST"
+          ]
+        },
+        {
+          "route": "11",
+          "group": "L1",
+          "dcs": [
+            "NW",
+            "MN"
+          ],
+          "total_qty": 30,
+          "appts": [
+            "1/ 08, @ 8:00 PM PST",
+            "1/12, @  9:30 PM CST"
           ]
         }
       ]

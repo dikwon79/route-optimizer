@@ -3369,7 +3369,11 @@ async function uploadRAG(input) {
           h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
           h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + (s.appt||'') + '</td></tr>';
+          var apptDisplay = s.appt || '';
+          if (s.appt_history && s.appt_history.length > 1) {
+            apptDisplay += ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span>';
+          }
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + apptDisplay + '</td></tr>';
         });
       });
       h += '</tbody></table></div>';
@@ -4018,7 +4022,11 @@ async function uploadRAG(input) {
           h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
           h += '<td>' + grpBadge + '</td>';
           h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
-          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + (s.appt||'') + '</td></tr>';
+          var apptDisplay = s.appt || '';
+          if (s.appt_history && s.appt_history.length > 1) {
+            apptDisplay += ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span>';
+          }
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + apptDisplay + '</td></tr>';
         });
       });
       h += '</tbody></table></div>';
@@ -4210,9 +4218,13 @@ def rag_preview():
         else:
             pu = last_pu  # inherit from previous row (merged cell)
         due = str(vals[col.get("due", 0)] or "").strip() if col.get("due") is not None else ""
-        appt = str(vals[col.get("appt", 0)] or "").strip() if col.get("appt") is not None else ""
-        if '->' in appt:
-            appt = appt.split('->')[-1].strip()
+        appt_raw = str(vals[col.get("appt", 0)] or "").strip() if col.get("appt") is not None else ""
+        appt_history = []
+        if '->' in appt_raw:
+            appt_history = [p.strip() for p in appt_raw.split('->')]
+            appt = appt_history[-1]  # final value
+        else:
+            appt = appt_raw
         pickup = str(vals[col.get("pickup", 0)] or "").strip() if col.get("pickup") is not None else ""
         loading = str(vals[col.get("loading", 0)] or "").strip() if col.get("loading") is not None else ""
 
@@ -4229,7 +4241,7 @@ def rag_preview():
             routes_map[route_num] = {"group": pu or "MS", "stops": []}
         routes_map[route_num]["stops"].append({
             "dc": dc, "po": po, "qty": qty, "due": due, 
-            "appt": appt, "pickup": pickup, "loading": loading
+            "appt": appt, "appt_history": appt_history, "pickup": pickup, "loading": loading
         })
         if pu: routes_map[route_num]["group"] = pu
 

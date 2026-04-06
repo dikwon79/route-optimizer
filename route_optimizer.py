@@ -438,13 +438,15 @@ def get_preferred_appt_hours() -> dict:
                 if i >= len(dcs) or not appt:
                     continue
                 dc = dcs[i]
-                # Parse APPT time: handle "old -> new" format
+                # Parse APPT time: handle multiple changes "a -> b -> c -> d"
                 import re
                 original_appt = None
+                all_appts = []
                 if '->' in appt:
-                    parts = appt.split('->')
-                    original_appt = parts[0].strip()
-                    appt = parts[-1].strip()  # use final value for preferred hour
+                    parts = [p.strip() for p in appt.split('->')]
+                    all_appts = parts
+                    original_appt = parts[0]
+                    appt = parts[-1]  # use final value for preferred hour
                 # Try to extract hour
                 h = None
                 # Pattern: H:MM AM/PM
@@ -474,6 +476,7 @@ def get_preferred_appt_hours() -> dict:
                     # If there was an original APPT, track delay pattern
                     if original_appt:
                         dc_hours[dc]["delays"] += 1
+                        dc_hours[dc].setdefault("change_counts", []).append(len(all_appts))
                         # Parse original hour too
                         m_orig = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)', original_appt)
                         if not m_orig:
