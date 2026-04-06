@@ -1327,6 +1327,8 @@ function refreshAfterEdit(result) {
   drawRoutes(result);
   // Update cost displays
   updateMapCosts(result);
+  // Auto-run schedule after edit
+  setTimeout(function() { autoSchedule(); }, 300);
   // Update summary totals in the DOM
   var liveTotal = 0, liveRoutes = 0;
   [result.ms_result, result.l1_result].forEach(function(gr) {
@@ -3347,7 +3349,47 @@ function deleteOrigin(name) {
   });
 }
 
+async function uploadRAG(input) {
+  if (!input.files || !input.files[0]) return;
+  var formData = new FormData();
+  formData.append('file', input.files[0]);
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 중...</div>';
+  try {
+    var resp = await fetch('/api/rag-learn', {method: 'POST', body: formData});
+    var data = await resp.json();
+    if (data.success) {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+      loadRAGHistory();
+    } else {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Error') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
+  }
+  input.value = '';
+}
+
+async function loadRAGHistory() {
+  try {
+    var resp = await fetch('/api/rag-history');
+    var data = await resp.json();
+    var entries = data.entries || [];
+    if (entries.length === 0) {
+      document.getElementById('rag-history').innerHTML = '<p class="text-muted small">학습된 배차 데이터가 없습니다.</p>';
+      return;
+    }
+    var h = '<table class="table table-sm small mt-3"><thead><tr><th>Date</th><th>Routes</th><th>POs</th></tr></thead><tbody>';
+    entries.forEach(function(e) {
+      var routes = e.routes.map(function(r) { return r.dcs.join('+') + '(' + r.total_qty + ')'; }).join(' | ');
+      h += '<tr><td>' + e.date + '</td><td>' + routes + '</td><td>' + e.total_pos + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('rag-history').innerHTML = h;
+  } catch(e) {}
+}
+
 loadData();
+loadRAGHistory();
 </script>
 </body>
 </html>
@@ -3831,6 +3873,19 @@ LEARNED_PAGE = r"""
     <h5><i class="bi bi-clock-history"></i> 학습 이력 (최근 50건)</h5>
     <div id="saved-results"></div>
   </div>
+
+  <!-- RAG Training Data -->
+  <div class="card p-4 mb-4">
+    <h5><i class="bi bi-database-add"></i> 과거 배차 데이터 학습 (RAG)</h5>
+    <p class="text-muted small">과거 실제 배차 엑셀을 업로드하면 AI가 패턴을 학습합니다. 같은 ROUTE 번호 = 같은 트럭.</p>
+    <div class="d-flex gap-2 mb-3">
+      <a href="/api/rag-template.xlsx" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> 템플릿 다운로드</a>
+      <button class="btn btn-sm btn-outline-warning" onclick="document.getElementById('rag-upload').click()"><i class="bi bi-upload"></i> 배차 데이터 업로드</button>
+      <input type="file" id="rag-upload" accept=".xlsx,.xls" style="display:none" onchange="uploadRAG(this)">
+    </div>
+    <div id="rag-status"></div>
+    <div id="rag-history"></div>
+  </div>
 </div>
 
 <script>
@@ -3901,11 +3956,191 @@ async function resetPrefs() {
   loadData();
 }
 
+async function uploadRAG(input) {
+  if (!input.files || !input.files[0]) return;
+  var formData = new FormData();
+  formData.append('file', input.files[0]);
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 학습 중...</div>';
+  try {
+    var resp = await fetch('/api/rag-learn', {method: 'POST', body: formData});
+    var data = await resp.json();
+    if (data.success) {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> ' + data.message + '</div>';
+      loadRAGHistory();
+    } else {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Error') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
+  }
+  input.value = '';
+}
+
+async function loadRAGHistory() {
+  try {
+    var resp = await fetch('/api/rag-history');
+    var data = await resp.json();
+    var entries = data.entries || [];
+    if (entries.length === 0) {
+      document.getElementById('rag-history').innerHTML = '<p class="text-muted small">학습된 배차 데이터가 없습니다.</p>';
+      return;
+    }
+    var h = '<table class="table table-sm small mt-3"><thead><tr><th>Date</th><th>Routes</th><th>POs</th></tr></thead><tbody>';
+    entries.forEach(function(e) {
+      var routes = e.routes.map(function(r) { return r.dcs.join('+') + '(' + r.total_qty + ')'; }).join(' | ');
+      h += '<tr><td>' + e.date + '</td><td>' + routes + '</td><td>' + e.total_pos + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('rag-history').innerHTML = h;
+  } catch(e) {}
+}
+
 loadData();
+loadRAGHistory();
 </script>
 </body>
 </html>
 """
+
+
+@app.route("/api/rag-template.xlsx", methods=["GET"])
+def rag_template():
+    """Download RAG training data template."""
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "배차 데이터"
+
+    hfont = Font(bold=True, color="FFFFFF", size=11)
+    hfill = PatternFill(start_color="003D7A", end_color="003D7A", fill_type="solid")
+    halign = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    border = Border(left=Side(style="thin"), right=Side(style="thin"),
+                    top=Side(style="thin"), bottom=Side(style="thin"))
+
+    headers = [("ROUTE", 8), ("PU FROM", 8), ("DC", 8), ("PO #", 22),
+               ("QTY (PALLETS)", 14), ("PICK UP", 18), ("DUE DATE", 12)]
+    col_letters = 'ABCDEFG'
+    for col, (name, width) in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=name)
+        cell.font = hfont; cell.fill = hfill; cell.alignment = halign; cell.border = border
+        ws.column_dimensions[col_letters[col-1]].width = width
+
+    samples = [
+        (1, "MS", "MG", "MG10189076-01", 40, "3/13 @ 11am", "3/24"),
+        (1, "MS", "MK", "MK10090088-01", 20, "", "3/24"),
+        (2, "MS", "SE", "SE10198234-01", 36, "3/13 @ 12pm", "3/24"),
+        (2, "MS", "FE", "FE10190732-01", 8, "", "3/24"),
+        (2, "MS", "ME", "ME10132021-01", 12, "", "3/24"),
+        (3, "MS", "MN", "MN10098698-01", 20, "3/16 @ 11am", "3/24"),
+        (4, "L1", "NW", "NW10089277-01", 4, "3/13 @ 12pm", "3/24"),
+        (4, "L1", "MW", "MW10094380-01", 44, "", "3/24"),
+    ]
+    for r, row_data in enumerate(samples, 2):
+        for c, val in enumerate(row_data, 1):
+            cell = ws.cell(row=r, column=c, value=val)
+            cell.border = border
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return Response(buf.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=rag_training_template.xlsx"})
+
+
+@app.route("/api/rag-learn", methods=["POST"])
+def rag_learn():
+    """Upload past dispatch data for RAG learning."""
+    from openpyxl import load_workbook
+    from io import BytesIO
+    from route_optimizer import load_preferences, save_preferences, learn_from_result
+
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "No file"})
+
+    f = request.files["file"]
+    wb = load_workbook(BytesIO(f.read()), data_only=True)
+    ws = wb.active
+
+    headers = [str(cell.value or "").strip().upper() for cell in ws[1]]
+    col = {}
+    for i, h in enumerate(headers):
+        if h == "ROUTE": col["route"] = i
+        elif h == "PU FROM": col["pu"] = i
+        elif h == "DC": col["dc"] = i
+        elif "PO" in h and "#" in h: col["po"] = i
+        elif "QTY" in h or "PALLET" in h: col["qty"] = i
+        elif "PICK" in h: col["pickup"] = i
+        elif "DUE" in h: col["due"] = i
+
+    if "route" not in col or "dc" not in col:
+        return jsonify({"success": False, "error": "ROUTE, DC 컬럼이 필요합니다."})
+
+    # Parse rows into routes
+    routes_map = {}  # route_num -> {group, stops: [{dc, po, qty}]}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        vals = list(row)
+        route_num = vals[col["route"]] if col.get("route") is not None else None
+        if not route_num: continue
+        route_num = str(route_num).strip()
+
+        dc = str(vals[col["dc"]] or "").strip().upper()
+        po = str(vals[col.get("po", 0)] or "").strip()
+        qty = 0
+        if col.get("qty") is not None:
+            try: qty = int(float(str(vals[col["qty"]] or 0).replace(",","")))
+            except: pass
+        pu = str(vals[col.get("pu", 0)] or "").strip().upper()
+        due = str(vals[col.get("due", 0)] or "").strip()
+
+        if route_num not in routes_map:
+            routes_map[route_num] = {"group": pu or "MS", "stops": []}
+        routes_map[route_num]["stops"].append({"dc": dc, "po": po, "qty": qty, "due": due})
+        if pu: routes_map[route_num]["group"] = pu
+
+    # Convert to learning format and save
+    prefs = load_preferences()
+    if "rag_data" not in prefs: prefs["rag_data"] = []
+
+    rag_entry = {
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "total_pos": sum(len(r["stops"]) for r in routes_map.values()),
+        "routes": []
+    }
+
+    # Learn pair scores from each route
+    pair_scores = prefs.get("pair_scores", {})
+    for rnum, rdata in routes_map.items():
+        dcs = [s["dc"] for s in rdata["stops"]]
+        total_qty = sum(s["qty"] for s in rdata["stops"])
+        rag_entry["routes"].append({"route": rnum, "group": rdata["group"], "dcs": dcs, "total_qty": total_qty})
+
+        # Update pair scores
+        for i in range(len(dcs)):
+            for j in range(i+1, len(dcs)):
+                pair_key = "|".join(sorted([dcs[i], dcs[j]]))
+                pair_scores[pair_key] = pair_scores.get(pair_key, 0) + 2  # stronger weight for real data
+
+    prefs["pair_scores"] = pair_scores
+    prefs["rag_data"].append(rag_entry)
+    prefs["rag_data"] = prefs["rag_data"][-100:]  # keep last 100
+    save_preferences(prefs)
+
+    return jsonify({
+        "success": True,
+        "message": f"{len(routes_map)}개 루트, {rag_entry['total_pos']}개 PO 학습 완료. DC 페어링 점수 업데이트됨."
+    })
+
+
+@app.route("/api/rag-history", methods=["GET"])
+def rag_history():
+    from route_optimizer import load_preferences
+    prefs = load_preferences()
+    entries = prefs.get("rag_data", [])
+    return jsonify({"entries": entries[-20:]})
 
 
 @app.route("/learned")
