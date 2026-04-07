@@ -613,7 +613,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                             break
                         total_wait += wait_h
             
-            # Check: entire route must complete within 48h of first stop arrival
+            # Route completion limit: 2-stop=48h, 3-stop=120h (5 days - driver can rest between stops)
             if all_ok and len(result.get("schedule", [])) > 1:
                 sched = result["schedule"]
                 first_arr = sched[0].get("arrival_time", "")
@@ -624,7 +624,8 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
                     fa_dt = datetime.strptime(fa_parts[0] + " " + fa_parts[1], "%Y-%m-%d %H:%M")
                     la_dt = datetime.strptime(la_parts[0] + " " + la_parts[1], "%Y-%m-%d %H:%M")
                     route_duration_h = (la_dt - fa_dt).total_seconds() / 3600
-                    if route_duration_h > 48:
+                    max_duration = 120 if len(sched) >= 3 else 48
+                    if route_duration_h > max_duration:
                         all_ok = False
                 except (ValueError, IndexError):
                     pass
@@ -706,13 +707,24 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
             if pickup_day in (5, 6):  # Sat, Sun pickup needed
                 score += 50
 
-            # Short haul: prefer Mon departure (Fri pickup)
-            if not is_long_haul:
-                if weekday == 0:  # Monday
-                    score -= 15  # best for short haul
-                elif weekday in (1, 2, 3):  # Tue-Thu
+            # Single stop short haul (≤6h): prefer same-day pickup+delivery
+            if len(sched) == 1 and max_seg_hours <= 6:
+                # Best: depart in afternoon, arrive same evening
+                if 12 <= depart_dt.hour <= 16:
+                    score -= 25  # strong bonus for same-day delivery
+                elif 10 <= depart_dt.hour <= 18:
+                    score -= 15
+            elif not is_long_haul:
+                # Multi-stop short haul: prefer Tue/Wed departure (spread from Fri/Mon)
+                if weekday in (1, 2):  # Tue, Wed
+                    score -= 15
+                elif weekday in (0, 3):  # Mon, Thu
                     score -= 5
             
+            # Mild penalty for Monday bunching (encourage Tue/Wed/Thu spread)
+            if weekday == 0 and not is_long_haul:
+                score += 5
+
             # Penalize Friday arrival (risky - any delay = miss weekend)
             for si2, stop2 in enumerate(sched):
                 try:
@@ -776,19 +788,23 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
     top_candidates = sorted(candidates, key=lambda c: c["score"])[:5] if candidates else [best]
 
     depart_final = best["depart"]
-    # Pickup is always a weekday (Mon-Fri), before departure
-    # If departure is Mon -> pickup Friday (weekend storage)
-    # If departure is Tue-Fri -> pickup day before
-    # If departure is Sat/Sun -> pickup Friday
-    dep_wd = depart_final.weekday()
-    if dep_wd == 0:  # Monday departure -> Friday pickup
-        pickup_date = depart_final - timedelta(days=3)
-    elif dep_wd == 5:  # Saturday departure -> Friday pickup
-        pickup_date = depart_final - timedelta(days=1)
-    elif dep_wd == 6:  # Sunday departure -> Friday pickup
-        pickup_date = depart_final - timedelta(days=2)
-    else:  # Tue-Fri -> day before
-        pickup_date = depart_final - timedelta(days=1)
+    # Single stop short haul: same-day pickup = departure day
+    is_same_day = (len(schedule) == 1 and max_seg_hours <= 6 and
+                   depart_final.weekday() not in (5, 6))
+
+    if is_same_day:
+        pickup_date = depart_final  # same day pickup + delivery
+    else:
+        # Pickup is always a weekday (Mon-Fri), before departure
+        dep_wd = depart_final.weekday()
+        if dep_wd == 0:  # Monday departure -> Friday pickup
+            pickup_date = depart_final - timedelta(days=3)
+        elif dep_wd == 5:  # Saturday departure -> Friday pickup
+            pickup_date = depart_final - timedelta(days=1)
+        elif dep_wd == 6:  # Sunday departure -> Friday pickup
+            pickup_date = depart_final - timedelta(days=2)
+        else:  # Tue-Fri -> day before
+            pickup_date = depart_final - timedelta(days=1)
 
     return {
         "pickup": pickup_date.strftime("%Y-%m-%d") + " 10:00",
@@ -808,7 +824,7 @@ def auto_schedule_route(route: dict, origin_coord: Tuple[float, float],
 def balance_departure_dates(schedules: List[dict]) -> List[dict]:
     """Balance departure dates so not too many routes depart on the same day.
     Max 3 departures per day. If exceeded, move lowest-priority routes to alternative dates."""
-    MAX_PER_DAY = 3
+    MAX_PER_DAY = 2  # max 2 departures per day for better spread
     
     # Count departures per date
     by_date = {}
