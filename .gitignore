@@ -3,3 +3,6 @@ __pycache__/
 *.swp
 server.log
 .osrm_cache.json
+.env
+mr_token.json
+learned_preferences.json

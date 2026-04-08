@@ -886,13 +886,19 @@ function renderResults(result, payload) {
   // === Load Plan Tab ===
   html += '<div class="tab-pane fade" id="tab-loadplan" role="tabpanel">';
   html += '<div class="card p-3 mb-3">';
-  html += '<h6><i class="bi bi-table"></i> Load Plan (적재 계획)</h6>';
+  html += '<div class="d-flex justify-content-between align-items-center mb-2">';
+  html += '<h6 class="mb-0"><i class="bi bi-table"></i> Load Plan (적재 계획)</h6>';
+  html += '<button class="btn btn-sm btn-success" onclick="bookAll()"><i class="bi bi-calendar-check"></i> 일괄 예약 (Book All)</button>';
+  html += '</div>';
+  html += '<div class="alert alert-info py-1 px-2 small mb-2">';
+  html += '<i class="bi bi-info-circle"></i> <strong>APPT 입력 형식:</strong> <code>4/26 @ 21:00</code> 또는 <code>4/26 @ 9:00 PM</code> &nbsp;|&nbsp; 스케줄 자동결정 시 자동 입력됩니다. &nbsp;|&nbsp; 예약 시 PO 존재 여부와 팔렛 수량을 자동 검증합니다.';
+  html += '</div>';
   html += '<div class="table-responsive">';
   html += '<table class="table table-sm table-bordered table-striped small mb-0" id="loadplan-table">';
   html += '<thead class="table-dark"><tr>';
   html += '<th>Route</th><th>PU from</th><th>SHIP TO</th><th>DC</th><th>PO #</th><th>Item #</th>';
   html += '<th>QTY<br>(PALLETS)</th><th>Loading</th><th>PICK UP</th><th>APPT (Delivery)</th>';
-  html += '<th>Hours</th><th>Due Date</th><th>WAVE</th><th>CARRIER</th>';
+  html += '<th>Hours</th><th>Due Date</th><th>WAVE</th><th>CARRIER</th><th>Booking</th>';
   html += '</tr></thead><tbody>';
 
   // Build warehouse address lookup
@@ -944,11 +950,26 @@ function renderResults(result, payload) {
         html += '<td class="text-center fw-bold">' + st.quantity + '</td>';
         html += '<td><select class="form-select form-select-sm" style="width:80px;">' + loadSel + '</select></td>';
         html += '<td style="white-space:nowrap;">' + pickupStr + '</td>';
-        html += '<td style="white-space:nowrap;">' + apptStr + '</td>';
+        // APPT: convert "2026-04-26 21:00" to "4/26 @ 21:00" for display
+        var apptDisplay = '';
+        if (apptStr) {
+          var parts = apptStr.split(' ');
+          if (parts.length >= 2) {
+            var dp = parts[0].split('-');
+            apptDisplay = parseInt(dp[1]) + '/' + parseInt(dp[2]) + ' @ ' + parts[1];
+          } else {
+            apptDisplay = apptStr;
+          }
+        }
+        html += '<td><input type="text" class="form-control form-control-sm appt-input" style="width:120px;" placeholder="4/26 @ 21:00" value="' + apptDisplay + '" data-dc="' + (st.dc_code||'') + '" data-po="' + (st.po_number||'') + '" data-pallets="' + (st.quantity||0) + '"></td>';
         html += '<td class="text-center">' + segHrs + '</td>';
         html += '<td>' + st.due_date + '</td>';
         html += '<td><input type="number" class="form-control form-control-sm" style="width:50px;" value="2" min="1"></td>';
         html += '<td><input type="text" class="form-control form-control-sm" style="width:90px;" value=""></td>';
+
+        // Booking button
+        html += '<td class="text-center"><button class="btn btn-sm btn-outline-success book-btn" onclick="bookSingle(this)" title="Book Appointment"><i class="bi bi-calendar-check"></i></button></td>';
+
         html += '</tr>';
       });
     });
@@ -2412,6 +2433,194 @@ function cutSelectedSegment() {
   var s = window._selectedSeg;
   window._selectedSeg = null;
   mapCutSegment(s.gi, s.ri, s.seg);
+}
+
+// ── Managed Receiving Booking ──────────────────────────────
+
+function parseApptInput(inputEl) {
+  // Parse "4/26 @ 21:00" or "4/26 @ 9:00 PM" format
+  var val = (inputEl.value || '').trim();
+  var dc = inputEl.getAttribute('data-dc') || '';
+  var po = inputEl.getAttribute('data-po') || '';
+  var pallets = parseInt(inputEl.getAttribute('data-pallets')) || 0;
+
+  if (!val) return {error: 'APPT가 비어있습니다.'};
+  if (!dc) return {error: 'DC 코드가 없습니다.'};
+  if (!po) return {error: 'PO 번호가 없습니다.'};
+
+  // Match: M/D @ HH:MM or M/D @ H:MM AM/PM
+  var m = val.match(/^(\d{1,2})\/(\d{1,2})\s*@\s*(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!m) {
+    // Try YYYY-MM-DD HH:MM format
+    var m2 = val.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
+    if (m2) {
+      return {dc_code: dc, po: po, date: m2[1]+'-'+m2[2].padStart(2,'0')+'-'+m2[3].padStart(2,'0'), time: m2[4].padStart(2,'0')+':'+m2[5], pallets: pallets};
+    }
+    return {error: 'APPT 형식이 잘못되었습니다. 예: 4/26 @ 21:00'};
+  }
+
+  var month = m[1].padStart(2, '0');
+  var day = m[2].padStart(2, '0');
+  var hour = parseInt(m[3]);
+  var min = m[4];
+  var ampm = (m[5] || '').toUpperCase();
+
+  if (ampm === 'PM' && hour < 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+
+  var year = new Date().getFullYear();
+  // If month is earlier than current, assume next year
+  if (parseInt(month) < new Date().getMonth() + 1) year++;
+
+  return {
+    dc_code: dc,
+    po: po,
+    date: year + '-' + month + '-' + day,
+    time: String(hour).padStart(2, '0') + ':' + min,
+    pallets: pallets
+  };
+}
+
+async function bookSingle(btn) {
+  var row = btn.closest('tr');
+  var inputEl = row.querySelector('.appt-input');
+  if (!inputEl) { showBookingModal('error', 'APPT 입력필드를 찾을 수 없습니다.'); return; }
+  var data = parseApptInput(inputEl);
+  if (!data || data.error) {
+    showBookingModal('error', (data && data.error) || 'APPT 형식이 잘못되었습니다.\n예: 4/26 @ 21:00');
+    return;
+  }
+  var pwd = prompt('예약을 진행하려면 비밀번호를 입력하세요:');
+  if (pwd !== 'logistics') { alert('비밀번호가 틀렸습니다.'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  try {
+    var resp = await fetch('/api/book-appointment', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    var result = await resp.json();
+    if (result.status === 'error') {
+      btn.classList.replace('btn-outline-success', 'btn-outline-danger');
+      btn.innerHTML = '<i class="bi bi-x-lg"></i>';
+      showBookingModal('error', data.dc_code + ' / ' + data.po + ':\n' + result.message);
+    } else if (result.status === 'matched') {
+      btn.classList.replace('btn-outline-success', 'btn-warning');
+      btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+      showBookingModal('matched', data.dc_code + ' / ' + data.po + ':\n' + result.message);
+    } else {
+      btn.classList.replace('btn-outline-success', 'btn-success');
+      btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+      showBookingModal('success', data.dc_code + ' / ' + data.po + ':\n' + result.message);
+    }
+  } catch(e) {
+    btn.classList.replace('btn-outline-success', 'btn-outline-danger');
+    btn.innerHTML = '<i class="bi bi-x-lg"></i>';
+    showBookingModal('error', 'Request failed: ' + e.message);
+  }
+}
+
+async function bookAll() {
+  var inputs = document.querySelectorAll('#loadplan-table .appt-input');
+  var loadPlan = [];
+  var errors = [];
+  inputs.forEach(function(inputEl) {
+    var data = parseApptInput(inputEl);
+    if (data && data.error) {
+      errors.push(data.error + ' (' + (inputEl.getAttribute('data-po')||'') + ')');
+    } else if (data && data.dc_code && data.po && data.date && data.time) {
+      loadPlan.push(data);
+    }
+  });
+  if (loadPlan.length === 0) {
+    var msg = 'APPT 날짜/시간이 없습니다.\n스케줄 자동결정을 먼저 실행하거나 직접 입력하세요.\n예: 4/26 @ 21:00';
+    if (errors.length) msg += '\n\n형식 오류:\n' + errors.join('\n');
+    showBookingModal('error', msg);
+    return;
+  }
+  if (errors.length) {
+    if (!confirm('일부 항목에 오류가 있습니다:\n' + errors.join('\n') + '\n\n유효한 ' + loadPlan.length + '건만 예약할까요?')) return;
+  }
+  var pwd = prompt(loadPlan.length + '건의 appointment를 일괄 예약합니다.\n비밀번호를 입력하세요:');
+  if (pwd !== 'logistics') { alert('비밀번호가 틀렸습니다.'); return; }
+
+  document.getElementById('loading-overlay').classList.add('active');
+  try {
+    var resp = await fetch('/api/book-batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({load_plan: loadPlan})
+    });
+    var result = await resp.json();
+    document.getElementById('loading-overlay').classList.remove('active');
+
+    if (result.status === 'error') {
+      showBookingModal('error', result.message);
+      return;
+    }
+
+    // Update buttons based on results
+    var summary = [];
+    var btnArr = Array.from(document.querySelectorAll('#loadplan-table .book-btn'));
+    (result.results || []).forEach(function(r, i) {
+      if (i < btnArr.length) {
+        var btn = btnArr[i];
+        if (r.status === 'error') {
+          btn.classList.replace('btn-outline-success', 'btn-outline-danger');
+          btn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        } else if (r.status === 'matched') {
+          btn.classList.replace('btn-outline-success', 'btn-warning');
+          btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+        } else {
+          btn.classList.replace('btn-outline-success', 'btn-success');
+          btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+        }
+      }
+      summary.push((r.dc_code||'') + ' ' + (r.po||'') + ': ' + (r.status||'') + ' - ' + (r.message||''));
+    });
+    showBookingModal('batch', summary.join('\n'));
+  } catch(e) {
+    document.getElementById('loading-overlay').classList.remove('active');
+    showBookingModal('error', 'Request failed: ' + e.message);
+  }
+}
+
+function showBookingModal(type, message) {
+  var existing = document.getElementById('booking-modal');
+  if (existing) existing.remove();
+
+  var titleMap = {
+    'success': 'Appointment Booked',
+    'matched': 'Slot Matched',
+    'error': 'Booking Error',
+    'batch': 'Batch Booking Results'
+  };
+  var colorMap = {
+    'success': 'text-success',
+    'matched': 'text-warning',
+    'error': 'text-danger',
+    'batch': 'text-primary'
+  };
+  var iconMap = {
+    'success': 'bi-check-circle-fill',
+    'matched': 'bi-info-circle-fill',
+    'error': 'bi-exclamation-triangle-fill',
+    'batch': 'bi-list-check'
+  };
+
+  var html = '<div class="modal fade" id="booking-modal" tabindex="-1">';
+  html += '<div class="modal-dialog"><div class="modal-content">';
+  html += '<div class="modal-header"><h5 class="modal-title ' + (colorMap[type]||'') + '">';
+  html += '<i class="bi ' + (iconMap[type]||'') + '"></i> ' + (titleMap[type]||'Result');
+  html += '</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>';
+  html += '<div class="modal-body"><pre style="white-space:pre-wrap;margin:0;">' + message + '</pre></div>';
+  html += '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>';
+  html += '</div></div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  var modal = new bootstrap.Modal(document.getElementById('booking-modal'));
+  modal.show();
 }
 
 // Init
@@ -3935,8 +4144,17 @@ LEARNED_PAGE = r"""
     <p class="text-muted small">과거 실제 배차 엑셀을 업로드하면 AI가 패턴을 학습합니다. 같은 ROUTE 번호 = 같은 트럭.</p>
     <div class="d-flex gap-2 mb-3">
       <a href="/api/rag-template.xlsx" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> 템플릿 다운로드</a>
-      <button class="btn btn-sm btn-outline-warning" onclick="document.getElementById('rag-upload').click()"><i class="bi bi-upload"></i> 배차 데이터 업로드</button>
+      <button class="btn btn-sm btn-outline-warning" onclick="document.getElementById('rag-upload').click()"><i class="bi bi-upload"></i> 엑셀 업로드</button>
       <input type="file" id="rag-upload" accept=".xlsx,.xls" style="display:none" onchange="uploadRAG(this)">
+      <button class="btn btn-sm btn-outline-info" onclick="togglePasteArea()"><i class="bi bi-clipboard"></i> 붙여넣기</button>
+    </div>
+    <div id="paste-area" style="display:none;" class="mb-3">
+      <p class="text-muted small mb-1">엑셀에서 헤더 포함 데이터를 복사한 후 아래에 붙여넣기 하세요. (탭 구분)</p>
+      <textarea id="paste-input" class="form-control" rows="8" placeholder="PU from&#9;SHIP TO&#9;DC&#9;PO #&#9;QTY (PALLETS)&#9;Loading&#9;PICK UP&#9;APPT (Delivery)&#9;Hours"></textarea>
+      <div class="mt-2">
+        <button class="btn btn-sm btn-primary" onclick="parsePaste()"><i class="bi bi-check-lg"></i> 파싱</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="togglePasteArea()">취소</button>
+      </div>
     </div>
     <div id="rag-status"></div>
     <div id="rag-history"></div>
@@ -3981,8 +4199,9 @@ async function loadData() {
     rhtml = '<p class="text-muted">이력이 없습니다.</p>';
   } else {
     rhtml = '<div class="table-responsive"><table class="table table-sm table-striped small">';
-    rhtml += '<thead><tr><th>#</th><th>Date</th><th>Group</th><th>Routes</th><th>Total Cost</th></tr></thead><tbody>';
+    rhtml += '<thead><tr><th>#</th><th>Date</th><th>Group</th><th>Routes</th><th>Total Cost</th><th></th></tr></thead><tbody>';
     saved.forEach(function(s, idx) {
+      var origIdx = (data.saved_results || []).length - 1 - idx;
       var routeStr = s.routes.map(function(r) {
         return r.dcs.join('+');
       }).join(' | ');
@@ -3992,6 +4211,7 @@ async function loadData() {
       rhtml += '<td><span class="badge ' + (s.group === 'MS-WH' ? 'bg-danger' : 'bg-primary') + '">' + s.group + '</span></td>';
       rhtml += '<td style="font-size:0.8rem;">' + routeStr + '</td>';
       rhtml += '<td>$' + (s.total_cost || 0).toLocaleString() + '</td>';
+      rhtml += '<td><button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteResult(' + origIdx + ')" title="삭제"><i class="bi bi-trash"></i></button></td>';
       rhtml += '</tr>';
     });
     rhtml += '</tbody></table></div>';
@@ -4002,6 +4222,12 @@ async function loadData() {
 async function deletePair(key) {
   if (!confirm(key.replace('|', ' + ') + ' 페어링을 삭제하시겠습니까?')) return;
   await fetch('/api/preferences/delete-pair', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({pair: key})});
+  loadData();
+}
+
+async function deleteResult(idx) {
+  if (!confirm('이 학습 이력을 삭제하시겠습니까?')) return;
+  await fetch('/api/preferences/delete-result', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({index: idx})});
   loadData();
 }
 
@@ -4088,15 +4314,78 @@ async function loadRAGHistory() {
       document.getElementById('rag-history').innerHTML = '<p class="text-muted small">학습된 배차 데이터가 없습니다.</p>';
       return;
     }
-    var h = '<table class="table table-sm small mt-3"><thead><tr><th>Date</th><th>Routes</th><th>POs</th></tr></thead><tbody>';
+    var h = '<table class="table table-sm small mt-3"><thead><tr><th>Date</th><th>Routes</th><th>POs</th><th></th></tr></thead><tbody>';
     entries.forEach(function(e) {
       var routes = e.routes.map(function(r) { return r.dcs.join('+') + '(' + r.total_qty + ')'; }).join(' | ');
-      h += '<tr><td>' + e.date + '</td><td>' + routes + '</td><td>' + e.total_pos + '</td></tr>';
+      h += '<tr><td>' + e.date + '</td><td>' + routes + '</td><td>' + e.total_pos + '</td>';
+      h += '<td><button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="deleteRAG(' + e._idx + ')" title="삭제"><i class="bi bi-trash"></i></button></td></tr>';
     });
     h += '</tbody></table>';
     document.getElementById('rag-history').innerHTML = h;
   } catch(e) {}
 }
+
+async function deleteRAG(idx) {
+  if (!confirm('이 RAG 학습 데이터를 삭제하시겠습니까?')) return;
+  await fetch('/api/rag-delete', {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({index: idx})});
+  loadRAGHistory();
+}
+
+function togglePasteArea() {
+  var el = document.getElementById('paste-area');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') document.getElementById('paste-input').focus();
+}
+
+async function parsePaste() {
+  var text = document.getElementById('paste-input').value.trim();
+  if (!text) { alert('데이터를 붙여넣기 하세요.'); return; }
+
+  // Send to server for parsing
+  document.getElementById('rag-status').innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> 파싱 중...</div>';
+  try {
+    var resp = await fetch('/api/rag-paste', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: text})
+    });
+    var data = await resp.json();
+    if (data.success) {
+      window._ragPreview = data.preview;
+      document.getElementById('paste-area').style.display = 'none';
+      var h = '<div class="alert alert-warning"><b>' + data.total_routes + '개 루트, ' + data.total_pos + '개 PO</b> — 확인 후 학습 버튼을 누르세요.</div>';
+      h += '<div class="table-responsive"><table class="table table-sm table-bordered small">';
+      h += '<thead class="table-dark"><tr><th>Route</th><th>Group</th><th>DC</th><th>PO</th><th>Qty</th><th>Loading</th><th>Pickup</th><th>APPT</th></tr></thead><tbody>';
+      data.preview.forEach(function(r) {
+        var grpBadge = '<span class="badge '+(r.group==='MS'||r.group==='MS-WH'?'bg-danger':'bg-primary')+'">' + r.group + '</span>';
+        var routePickup = r.stops.find(function(s){return s.pickup;});
+        var pickupStr = routePickup ? routePickup.pickup : '';
+        r.stops.forEach(function(s, si) {
+          h += '<tr' + (si===0?' style="border-top:2px solid #000;"':'') + '>';
+          h += '<td>' + (si===0?'<b>R'+r.route+'</b>':'') + '</td>';
+          h += '<td>' + grpBadge + '</td>';
+          h += '<td><b>' + s.dc + '</b></td><td>' + s.po + '</td><td>' + s.qty + '</td>';
+          var apptDisplay = '';
+          if (s.appt_history && s.appt_history.length > 1) {
+            apptDisplay = s.appt_history[0] + ' <span class="badge bg-warning text-dark">' + s.appt_history.length + '회 변경</span><br><small class="text-muted">최종: ' + s.appt_history[s.appt_history.length-1] + '</small>';
+          } else {
+            apptDisplay = s.appt || '';
+          }
+          h += '<td>' + (s.loading||'-') + '</td><td>' + (si===0?pickupStr:(s.pickup||'')) + '</td><td>' + apptDisplay + '</td></tr>';
+        });
+      });
+      h += '</tbody></table></div>';
+      h += '<button class="btn btn-success" onclick="confirmRAG()"><i class="bi bi-check-lg"></i> 학습 확인</button> ';
+      h += '<button class="btn btn-outline-secondary" onclick="cancelRAG()">취소</button>';
+      document.getElementById('rag-status').innerHTML = h;
+    } else {
+      document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + (data.error || 'Error') + '</div>';
+    }
+  } catch(e) {
+    document.getElementById('rag-status').innerHTML = '<div class="alert alert-danger">' + e.message + '</div>';
+  }
+}
+
 
 loadData();
 loadRAGHistory();
@@ -4104,6 +4393,109 @@ loadRAGHistory();
 </body>
 </html>
 """
+
+
+@app.route("/api/rag-paste", methods=["POST"])
+def rag_paste():
+    """Parse pasted tab-separated data from Excel."""
+    import sys
+
+    data = request.get_json(force=True)
+    text = data.get("text", "")
+    if not text:
+        return jsonify({"success": False, "error": "No data"})
+
+    # Handle quoted fields with embedded newlines (e.g. multi-line addresses)
+    import csv, io
+    reader = csv.reader(io.StringIO(text), delimiter="\t", quotechar='"')
+    all_rows = list(reader)
+    if len(all_rows) < 2:
+        return jsonify({"success": False, "error": "헤더와 데이터가 필요합니다."})
+
+    # Parse header
+    headers = [h.strip().upper() for h in all_rows[0]]
+    col = {}
+    for i, h in enumerate(headers):
+        if h == "ROUTE": col["route"] = i
+        elif "PU" in h and "FROM" in h: col["pu"] = i
+        elif "SHIP" in h and "TO" in h: col["shipto"] = i
+        elif h == "DC": col["dc"] = i
+        elif "PO" in h and "#" in h: col["po"] = i
+        elif "QTY" in h or "PALLET" in h: col["qty"] = i
+        elif "LOADING" in h: col["loading"] = i
+        elif "PICK" in h: col["pickup"] = i
+        elif "APPT" in h or ("DELIVERY" in h and "DUE" not in h): col["appt"] = i
+        elif "HOUR" in h or h == "HRS": col["hours"] = i
+        elif "DUE" in h: col["due"] = i
+
+    if "dc" not in col:
+        return jsonify({"success": False, "error": "DC 컬럼이 필요합니다. 헤더: " + ", ".join(headers)})
+
+    print(f"RAG paste headers: {headers}", file=sys.stderr)
+    print(f"RAG paste col map: {col}", file=sys.stderr)
+
+    routes_map = {}
+    current_route = 0
+    has_route_col = "route" in col
+    last_pu = "MS"
+
+    for vals in all_rows[1:]:
+        if not any(v.strip() for v in vals):
+            continue
+
+        dc = vals[col["dc"]].strip().upper() if col.get("dc") is not None and col["dc"] < len(vals) else ""
+        if not dc:
+            continue
+
+        po = vals[col["po"]].strip() if col.get("po") is not None and col["po"] < len(vals) else ""
+        qty = 0
+        if col.get("qty") is not None and col["qty"] < len(vals):
+            try: qty = int(float(str(vals[col["qty"]] or "0").strip().replace(",", "")))
+            except: pass
+        pu = vals[col["pu"]].strip().upper() if col.get("pu") is not None and col["pu"] < len(vals) else ""
+        if pu:
+            last_pu = pu
+        else:
+            pu = last_pu
+
+        appt_raw = vals[col["appt"]].strip() if col.get("appt") is not None and col["appt"] < len(vals) else ""
+        appt_history = []
+        if "->" in appt_raw:
+            appt_history = [p.strip() for p in appt_raw.split("->")]
+            appt = appt_history[0]
+        else:
+            appt = appt_raw
+
+        pickup = vals[col["pickup"]].strip() if col.get("pickup") is not None and col["pickup"] < len(vals) else ""
+        loading = vals[col["loading"]].strip() if col.get("loading") is not None and col["loading"] < len(vals) else ""
+        due = vals[col["due"]].strip() if col.get("due") is not None and col["due"] < len(vals) else ""
+
+        if has_route_col and col["route"] < len(vals):
+            route_num = vals[col["route"]].strip()
+            if not route_num: route_num = str(current_route)
+        else:
+            if pickup:
+                current_route += 1
+            route_num = str(current_route)
+
+        if route_num not in routes_map:
+            routes_map[route_num] = {"group": pu or "MS", "stops": []}
+        routes_map[route_num]["stops"].append({
+            "dc": dc, "po": po, "qty": qty, "due": due,
+            "appt": appt, "appt_history": appt_history, "pickup": pickup, "loading": loading
+        })
+        if pu: routes_map[route_num]["group"] = pu
+
+    preview = []
+    def route_sort_key(item):
+        try: return int(item[0])
+        except: return 999
+    for rnum, rdata in sorted(routes_map.items(), key=route_sort_key):
+        stops = [{"dc": s["dc"], "po": s["po"], "qty": s["qty"], "appt": s.get("appt",""), "appt_history": s.get("appt_history",[]), "loading": s.get("loading",""), "pickup": s.get("pickup","")} for s in rdata["stops"]]
+        preview.append({"route": rnum, "group": rdata["group"], "stops": stops, "total_qty": sum(s["qty"] for s in rdata["stops"])})
+
+    print(f"RAG paste: {len(all_rows)-1} rows, {len(routes_map)} routes", file=sys.stderr)
+    return jsonify({"success": True, "preview": preview, "total_routes": len(preview), "total_pos": sum(len(r["stops"]) for r in preview)})
 
 
 @app.route("/api/rag-template.xlsx", methods=["GET"])
@@ -4316,8 +4708,38 @@ def rag_confirm():
 def rag_history():
     from route_optimizer import load_preferences
     prefs = load_preferences()
-    entries = prefs.get("rag_data", [])
+    all_entries = prefs.get("rag_data", [])
+    # Include original index for delete operations
+    entries = [{"_idx": i, **e} for i, e in enumerate(all_entries)]
     return jsonify({"entries": entries[-20:]})
+
+
+@app.route("/api/rag-delete", methods=["POST"])
+def api_rag_delete():
+    """Delete a single RAG training entry by index, and subtract pair scores."""
+    from route_optimizer import load_preferences, save_preferences
+    data = request.get_json(force=True)
+    idx = data.get("index")
+    prefs = load_preferences()
+    rag = prefs.get("rag_data", [])
+    if idx is not None and 0 <= idx < len(rag):
+        # Subtract pair scores that were added when this entry was saved
+        entry = rag[idx]
+        pair_scores = prefs.get("pair_scores", {})
+        for r in entry.get("routes", []):
+            dcs = r.get("dcs", [])
+            for i in range(len(dcs)):
+                for j in range(i + 1, len(dcs)):
+                    pair_key = "|".join(sorted([dcs[i], dcs[j]]))
+                    if pair_key in pair_scores:
+                        pair_scores[pair_key] = max(0, pair_scores[pair_key] - 2)
+                        if pair_scores[pair_key] == 0:
+                            del pair_scores[pair_key]
+        prefs["pair_scores"] = pair_scores
+        rag.pop(idx)
+        prefs["rag_data"] = rag
+        save_preferences(prefs)
+    return jsonify({"success": True})
 
 
 @app.route("/learned")
@@ -4333,6 +4755,34 @@ def api_delete_pair():
     prefs = load_preferences()
     prefs.get("pair_scores", {}).pop(pair, None)
     save_preferences(prefs)
+    return jsonify({"success": True})
+
+
+@app.route("/api/preferences/delete-result", methods=["POST"])
+def api_delete_result():
+    """Delete a single saved result by index, and subtract pair scores."""
+    from route_optimizer import load_preferences, save_preferences
+    data = request.get_json(force=True)
+    idx = data.get("index")
+    prefs = load_preferences()
+    results = prefs.get("saved_results", [])
+    if idx is not None and 0 <= idx < len(results):
+        # Subtract pair scores (learn_from_result adds +1 per pair)
+        entry = results[idx]
+        pair_scores = prefs.get("pair_scores", {})
+        for r in entry.get("routes", []):
+            dcs = r.get("dcs", [])
+            for i in range(len(dcs)):
+                for j in range(i + 1, len(dcs)):
+                    pair_key = "|".join(sorted([dcs[i], dcs[j]]))
+                    if pair_key in pair_scores:
+                        pair_scores[pair_key] = max(0, pair_scores[pair_key] - 1)
+                        if pair_scores[pair_key] == 0:
+                            del pair_scores[pair_key]
+        prefs["pair_scores"] = pair_scores
+        results.pop(idx)
+        prefs["saved_results"] = results
+        save_preferences(prefs)
     return jsonify({"success": True})
 
 
@@ -4359,6 +4809,55 @@ if __name__ == "__main__":
         print(f"  Stop the existing process first, or this app may fail to bind.")
         print(f"  Try: fuser -k {port}/tcp")
         print()
+
+    # ── Managed Receiving Appointment Booking ────────────────────
+    from mr_client import MRClient
+    _mr_client = None
+
+    def _get_mr():
+        global _mr_client
+        if _mr_client is None:
+            _mr_client = MRClient()
+            _mr_client.login()
+        return _mr_client
+
+    @app.route("/api/book-appointment", methods=["POST"])
+    def api_book_appointment():
+        """Book a single appointment via Managed Receiving."""
+        data = request.get_json(force=True)
+        dc_code = data.get("dc_code", "")
+        po = data.get("po", "")
+        date = data.get("date", "")
+        time_str = data.get("time", "")
+        pallets = data.get("pallets")
+        email = data.get("email", "logistics@innofoods.ca")
+
+        if not all([dc_code, po, date, time_str]):
+            return jsonify({"status": "error", "message": "Missing required fields: dc_code, po, date, time"}), 400
+
+        try:
+            mr = _get_mr()
+            result = mr.book_appointment(dc_code, po, date, time_str, pallets, email)
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    @app.route("/api/book-batch", methods=["POST"])
+    def api_book_batch():
+        """Book multiple appointments from load plan."""
+        data = request.get_json(force=True)
+        load_plan = data.get("load_plan", [])
+        email = data.get("email", "logistics@innofoods.ca")
+
+        if not load_plan:
+            return jsonify({"status": "error", "message": "Empty load plan"}), 400
+
+        try:
+            mr = _get_mr()
+            results = mr.book_batch(load_plan, email)
+            return jsonify({"status": "ok", "results": results})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
 
     print(f"Starting Route Optimizer Web on http://0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port, debug=False)

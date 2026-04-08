@@ -851,7 +851,7 @@ def balance_departure_dates(schedules: List[dict]) -> List[dict]:
         scored.sort(key=lambda x: x[2])  # shortest first = first to move
         to_move = scored[:len(scored) - MAX_PER_DAY]  # move the shortest ones
         
-        for idx, top_cands in to_move:
+        for idx, top_cands, _travel_h in to_move:
             # Find an alternative date that's not overloaded
             for cand in top_cands:
                 alt_date = cand["depart"][:10]

@@ -23,7 +23,8 @@
       "receiving_code": "ME",
       "lat": 28.3042,
       "lon": -81.4164,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 187
     },
     {
       "dc_code": "MW",
@@ -36,7 +37,8 @@
       "receiving_code": "MW",
       "lat": 40.1672,
       "lon": -105.1019,
-      "timezone": "America/Denver"
+      "timezone": "America/Denver",
+      "mr_site_id": 171
     },
     {
       "dc_code": "MO",
@@ -49,7 +51,8 @@
       "receiving_code": "MO",
       "lat": 37.12,
       "lon": -93.4802,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 178
     },
     {
       "dc_code": "MK",
@@ -62,7 +65,8 @@
       "receiving_code": "MK",
       "lat": 37.8887,
       "lon": -84.573,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 173
     },
     {
       "dc_code": "NC",
@@ -75,7 +79,8 @@
       "receiving_code": "NC",
       "lat": 35.9438,
       "lon": -77.7527,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 172
     },
     {
       "dc_code": "MG",
@@ -88,7 +93,8 @@
       "receiving_code": "MG",
       "lat": 41.0442,
       "lon": -83.6499,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 176
     },
     {
       "dc_code": "MN",
@@ -101,7 +107,8 @@
       "receiving_code": "MN",
       "lat": 44.4583,
       "lon": -93.1616,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 186
     },
     {
       "dc_code": "SE",
@@ -114,7 +121,8 @@
       "receiving_code": "SE",
       "lat": 33.9519,
       "lon": -83.3576,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 168
     },
     {
       "dc_code": "MS",
@@ -127,7 +135,8 @@
       "receiving_code": "MS",
       "lat": 33.4353,
       "lon": -112.3577,
-      "timezone": "America/Phoenix"
+      "timezone": "America/Phoenix",
+      "mr_site_id": 185
     },
     {
       "dc_code": "MD",
@@ -140,7 +149,8 @@
       "receiving_code": "MD",
       "lat": 31.0587,
       "lon": -85.3963,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 169
     },
     {
       "dc_code": "NT",
@@ -153,7 +163,8 @@
       "receiving_code": "NT",
       "lat": 32.6587,
       "lon": -97.3208,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 159
     },
     {
       "dc_code": "MP",
@@ -166,7 +177,8 @@
       "receiving_code": "MP",
       "lat": 37.3022,
       "lon": -120.483,
-      "timezone": "America/Los_Angeles"
+      "timezone": "America/Los_Angeles",
+      "mr_site_id": 181
     },
     {
       "dc_code": "SO",
@@ -179,7 +191,8 @@
       "receiving_code": "SO",
       "lat": 31.5791,
       "lon": -90.4407,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 180
     },
     {
       "dc_code": "MI",
@@ -192,7 +205,8 @@
       "receiving_code": "MI",
       "lat": 40.1245,
       "lon": -87.63,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 183
     },
     {
       "dc_code": "PA",
@@ -205,7 +219,8 @@
       "receiving_code": "PA",
       "lat": 41.4687,
       "lon": -75.562,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 170
     },
     {
       "dc_code": "SW",
@@ -218,7 +233,8 @@
       "receiving_code": "SW",
       "lat": 31.0982,
       "lon": -97.3428,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 158
     },
     {
       "dc_code": "HP",
@@ -231,7 +247,8 @@
       "receiving_code": "HP",
       "lat": 33.5779,
       "lon": -101.8552,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 175
     },
     {
       "dc_code": "SZ",
@@ -244,7 +261,8 @@
       "receiving_code": "SZ",
       "lat": 34.1083,
       "lon": -117.2898,
-      "timezone": "America/Los_Angeles"
+      "timezone": "America/Los_Angeles",
+      "mr_site_id": 182
     },
     {
       "dc_code": "FE",
@@ -257,7 +275,8 @@
       "receiving_code": "FE",
       "lat": 29.1872,
       "lon": -82.1401,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 174
     },
     {
       "dc_code": "NE",
@@ -270,7 +289,8 @@
       "receiving_code": "NE",
       "lat": 43.1587,
       "lon": -76.3327,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 179
     },
     {
       "dc_code": "MZ",
@@ -283,7 +303,8 @@
       "receiving_code": "MZ",
       "lat": 38.3032,
       "lon": -77.4605,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 177
     },
     {
       "dc_code": "MY",
@@ -296,7 +317,8 @@
       "receiving_code": "MY",
       "lat": 43.2254,
       "lon": -71.7101,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 157
     },
     {
       "dc_code": "NW",
@@ -309,7 +331,8 @@
       "receiving_code": "NW",
       "lat": 47.1718,
       "lon": -122.5185,
-      "timezone": "America/Los_Angeles"
+      "timezone": "America/Los_Angeles",
+      "mr_site_id": 156
     },
     {
       "dc_code": "ME",
@@ -322,7 +345,8 @@
       "receiving_code": "ME",
       "lat": 31.1463,
       "lon": -97.3794,
-      "timezone": "America/Chicago"
+      "timezone": "America/Chicago",
+      "mr_site_id": 187
     },
     {
       "dc_code": "WJ",
@@ -335,7 +359,8 @@
       "receiving_code": "WJ",
       "lat": 39.7101,
       "lon": -75.4988,
-      "timezone": "America/New_York"
+      "timezone": "America/New_York",
+      "mr_site_id": 184
     }
   ],
   "receiving_schedules": {
